@@ -189,25 +189,25 @@ function TopicDetailContent({
   return (
     <div className="min-h-screen flex flex-col bg-[#090a10] text-[#f8fafc] selection:bg-indigo-500/30">
       {/* Top sticky Reader bar */}
-      <header className="sticky top-0 z-40 border-b border-white/10 bg-[#090a10]/90 backdrop-blur-xl px-4 py-3">
-        <div className="max-w-6xl mx-auto flex items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
+      <header className="sticky top-0 z-40 border-b border-white/10 bg-[#090a10]/90 backdrop-blur-xl px-3 sm:px-4 py-2.5 sm:py-3">
+        <div className="max-w-6xl mx-auto flex items-center justify-between gap-2 sm:gap-3">
+          <div className="flex items-center gap-2 sm:gap-3 min-w-0">
             <Button
               variant="ghost"
               size="sm"
               onClick={() => router.push('/')}
-              className="gap-1.5 text-xs text-zinc-400 hover:text-white hover:bg-white/5"
+              className="gap-1 sm:gap-1.5 text-xs text-zinc-400 hover:text-white hover:bg-white/5 px-2 sm:px-3 shrink-0"
             >
               <ArrowLeft className="w-4 h-4" />
               <span>Queue</span>
             </Button>
             <span className="text-zinc-600">/</span>
-            <span className="text-xs text-zinc-400 truncate max-w-[180px] sm:max-w-[280px]">
+            <span className="text-xs text-zinc-400 truncate max-w-[100px] xs:max-w-[150px] sm:max-w-[280px]">
               {topic.title}
             </span>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
             {/* Font size control */}
             <button
               type="button"
@@ -253,10 +253,10 @@ function TopicDetailContent({
                 <Button
                   size="sm"
                   onClick={() => setIsEditing(true)}
-                  className="h-8 text-xs bg-indigo-600 hover:bg-indigo-500 text-white gap-1.5 shadow-sm shadow-indigo-600/30"
+                  className="h-8 px-2.5 sm:px-3 text-xs bg-indigo-600 hover:bg-indigo-500 text-white gap-1 sm:gap-1.5 shadow-sm shadow-indigo-600/30"
                 >
                   <Edit3 className="w-3.5 h-3.5" />
-                  <span>Edit Note</span>
+                  <span><span className="hidden sm:inline">Edit </span>Note</span>
                 </Button>
 
                 <Button
@@ -285,7 +285,7 @@ function TopicDetailContent({
       )}
 
       {/* Main Reader Layout with Outline Navigation */}
-      <div className="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 py-8 flex flex-col lg:flex-row gap-10">
+      <div className="flex-1 max-w-6xl w-full mx-auto px-3.5 sm:px-6 py-6 sm:py-8 flex flex-col lg:flex-row gap-6 sm:gap-10">
         {/* Sticky Table of Contents Sidebar (Desktop) */}
         {headings.length > 0 && (
           <aside className="hidden lg:block w-64 shrink-0">

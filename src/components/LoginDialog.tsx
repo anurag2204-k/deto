@@ -49,7 +49,7 @@ export function LoginDialog({ open, onOpenChange, onSuccess }: LoginDialogProps)
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[400px] bg-[#0f111a] border border-white/10 text-white rounded-2xl shadow-2xl">
+      <DialogContent className="w-[92vw] sm:max-w-[400px] bg-[#0f111a] border border-white/10 text-white rounded-2xl shadow-2xl p-4 sm:p-6">
         <DialogHeader>
           <div className="w-10 h-10 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 flex items-center justify-center mb-2">
             <Lock className="w-5 h-5" />

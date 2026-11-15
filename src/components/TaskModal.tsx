@@ -115,7 +115,7 @@ export function TaskModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-xl max-h-[90vh] overflow-y-auto bg-zinc-950 border-white/10 text-white rounded-2xl p-6">
+      <DialogContent className="w-[95vw] sm:max-w-xl max-h-[90dvh] overflow-y-auto bg-zinc-950 border-white/10 text-white rounded-2xl p-4 sm:p-6">
         <DialogHeader>
           <DialogTitle className="text-xl font-bold flex items-center gap-2">
             <span

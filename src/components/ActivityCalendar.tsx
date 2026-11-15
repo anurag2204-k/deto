@@ -143,20 +143,20 @@ export function ActivityCalendar({
   };
 
   return (
-    <div className="rounded-2xl border border-white/10 bg-zinc-950/70 p-5 sm:p-6 backdrop-blur-xl shadow-lg space-y-4">
+    <div className="rounded-2xl border border-white/10 bg-zinc-950/70 p-3.5 sm:p-6 backdrop-blur-xl shadow-lg space-y-4">
       {/* Top Section Nav Tabs */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/5 pb-4">
         {/* Left Title & Segment Selector */}
         <div className="flex flex-col gap-2.5">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-indigo-500/20 via-amber-500/10 to-emerald-500/10 border border-white/10 flex items-center justify-center text-indigo-400">
+            <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-indigo-500/20 via-amber-500/10 to-emerald-500/10 border border-white/10 flex items-center justify-center text-indigo-400 shrink-0">
               <CalendarIcon className="w-4 h-4" />
             </div>
             <div>
               <h3 className="text-sm sm:text-base font-bold text-white tracking-tight flex items-center gap-2">
                 <span>Activity &amp; Task Heatmap Calendars</span>
               </h3>
-              <p className="text-xs text-zinc-400 mt-0.5">
+              <p className="text-xs text-zinc-400 mt-0.5 line-clamp-1 sm:line-clamp-none">
                 Multi-calendar tracker — switch between overall activity, study queue, and individual scheduled tasks.
               </p>
             </div>
@@ -406,7 +406,7 @@ export function ActivityCalendar({
             </div>
           </div>
 
-          <div className="overflow-x-auto pb-2 pt-1 scrollbar-thin scrollbar-thumb-white/10">
+          <div className="overflow-x-auto pb-2 pt-1 scrollbar-thin scrollbar-thumb-white/10 touch-pan-x -webkit-overflow-scrolling-touch">
             <div className="min-w-[620px] space-y-1.5">
               {/* Month labels along top */}
               <div className="flex text-[11px] text-zinc-500 font-mono pl-7 h-4">
@@ -585,7 +585,7 @@ export function ActivityCalendar({
       ) : (
         /* ================= OVERVIEW / QUEUE CALENDAR ================= */
         <div className="relative">
-          <div className="overflow-x-auto pb-2 pt-1 scrollbar-thin scrollbar-thumb-white/10">
+          <div className="overflow-x-auto pb-2 pt-1 scrollbar-thin scrollbar-thumb-white/10 touch-pan-x -webkit-overflow-scrolling-touch">
             <div className="min-w-[620px] space-y-1.5">
               {/* Month labels along top */}
               <div className="flex text-[11px] text-zinc-500 font-mono pl-7 h-4">

@@ -150,14 +150,14 @@ export function DueView({
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2.5 shrink-0">
-                  <Badge className="bg-zinc-900 border border-white/10 text-zinc-400 text-xs font-normal">
-                    Revision #{currentRevisionNumber}
+                <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
+                  <Badge className="bg-zinc-900 border border-white/10 text-zinc-400 text-[11px] sm:text-xs font-normal px-1.5 sm:px-2.5">
+                    <span className="hidden sm:inline">Revision </span>#{currentRevisionNumber}
                   </Badge>
 
                   <Badge
                     variant="outline"
-                    className={`text-xs font-normal ${
+                    className={`text-[11px] sm:text-xs font-normal px-1.5 sm:px-2.5 ${
                       isOverdue
                         ? 'bg-red-500/10 text-red-400 border-red-500/30'
                         : 'bg-amber-500/10 text-amber-300 border-amber-500/30'
@@ -169,10 +169,11 @@ export function DueView({
                   {isOwner && (
                     <Button
                       size="sm"
-                      className="gap-1.5 text-xs h-7 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg shadow-sm"
+                      className="gap-1 text-xs h-7 px-2 sm:px-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg shadow-sm"
                       onClick={(e) => handleRevisionDone(e, topic._id)}
                     >
-                      <CheckCircle2 className="w-3.5 h-3.5" /> Done
+                      <CheckCircle2 className="w-3.5 h-3.5" />
+                      <span>Done</span>
                     </Button>
                   )}
                 </div>

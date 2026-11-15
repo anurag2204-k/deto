@@ -159,29 +159,6 @@ export default function DetoApp() {
     }
   }, [today, fetchDue]);
 
-  // Seed sample Gym task if user has 0 tasks and is authenticated owner
-  useEffect(() => {
-    if (isOwner && !loadingTasks && tasks.length === 0) {
-      createTask({
-        title: 'Gym Workout',
-        description: 'Strength training & progressive overload routine at least 4 days a week',
-        color: 'emerald',
-        frequency: '4x-week',
-        targetDays: 4,
-        targetPeriod: 'week',
-        todos: [
-          { id: 'todo-1', text: 'Main compound lift sets', done: false },
-          { id: 'todo-2', text: 'Accessory & isolation exercises', done: false },
-          { id: 'todo-3', text: '15-20 min cardio / incline walk', done: false },
-        ],
-      })
-        .then((seeded) => {
-          setTasks([seeded]);
-        })
-        .catch(() => {});
-    }
-  }, [isOwner, loadingTasks, tasks.length]);
-
   const handleLogout = async () => {
     try {
       await logout();
@@ -320,8 +297,8 @@ export default function DetoApp() {
 
   return (
     <div className="min-h-screen flex bg-[#090a10] text-[#f8fafc]">
-      {/* DESKTOP SIDEBAR NAVIGATION - Sticky full-height pinned footer */}
-      <aside className="hidden md:flex flex-col justify-between w-64 h-screen sticky top-0 border-r border-white/5 bg-[#090a10]/80 backdrop-blur-xl p-6 shrink-0 z-20">
+      {/* DESKTOP SIDEBAR NAVIGATION - Visible on desktop (lg: 1024px+); hidden on tablets (iPad Mini 768px) & mobile to give maximum room */}
+      <aside className="hidden lg:flex flex-col justify-between w-64 h-screen sticky top-0 border-r border-white/5 bg-[#090a10]/80 backdrop-blur-xl p-6 shrink-0 z-20">
         <div>
           {/* Brand Logo */}
           <div className="flex items-center gap-3 mb-10">
@@ -416,34 +393,34 @@ export default function DetoApp() {
         {/* Mountain Atmosphere Graphic in Top Right */}
         <AtmosphericBackdrop />
 
-        {/* Top Header / Profile Bar */}
-        <header className="sticky top-0 z-30 px-6 py-4 flex items-center justify-between bg-[#090a10]/40 backdrop-blur-md border-b border-white/5">
-          {/* Mobile brand header */}
-          <div className="flex items-center gap-2.5 md:hidden">
-            <div className="w-7 h-7 rounded-lg bg-indigo-500/20 border border-white/10 flex items-center justify-center text-indigo-400 font-bold text-sm">
+        {/* Top Header / Profile Bar - Fully responsive on Samsung Ultra & iPad Mini */}
+        <header className="sticky top-0 z-30 px-3.5 sm:px-6 py-2.5 sm:py-3.5 flex items-center justify-between bg-[#090a10]/60 backdrop-blur-md border-b border-white/5">
+          {/* Brand header on mobile & tablet */}
+          <div className="flex items-center gap-2 lg:hidden">
+            <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-indigo-500/20 via-emerald-500/10 to-amber-500/20 border border-white/10 flex items-center justify-center text-indigo-400 font-bold text-sm shadow-xs">
               ∞
             </div>
-            <span className="font-bold text-lg text-white">Deto</span>
+            <span className="font-bold text-base sm:text-lg text-white tracking-tight">Deto</span>
           </div>
 
-          <div className="hidden md:flex items-center gap-2 text-xs text-zinc-400">
+          <div className="hidden lg:flex items-center gap-2 text-xs text-zinc-400 font-mono">
             {today && <span>{today}</span>}
           </div>
 
-          {/* Right Header Buttons: Separate New Topic & New Task buttons */}
-          <div className="flex items-center gap-3 ml-auto">
+          {/* Right Header Buttons: Responsive spacing for Samsung Ultra, iPhone & iPad */}
+          <div className="flex items-center gap-1.5 sm:gap-2.5 ml-auto">
             {isOwner ? (
-              <div className="flex items-center gap-2.5">
+              <div className="flex items-center gap-1.5 sm:gap-2.5">
                 {/* Create Topic Button */}
                 <Button
                   onClick={openNewNotePage}
                   size="sm"
                   variant="outline"
-                  className="h-8 px-3 text-xs border-white/10 bg-white/5 hover:bg-white/10 text-zinc-200 font-medium rounded-lg gap-1.5"
+                  className="h-8 px-2 sm:px-3 text-xs border-white/10 bg-white/5 hover:bg-white/10 text-zinc-200 font-medium rounded-lg gap-1 active:scale-95 transition-transform"
                   title="Create study notes / topic in queue"
                 >
-                  <Plus className="w-3.5 h-3.5 text-indigo-400" />
-                  <span>New Topic</span>
+                  <Plus className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
+                  <span><span className="hidden sm:inline">New </span>Topic</span>
                 </Button>
 
                 {/* Create Task Button */}
@@ -453,23 +430,34 @@ export default function DetoApp() {
                     setTaskModalOpen(true);
                   }}
                   size="sm"
-                  className="h-8 px-3 text-xs bg-emerald-600 hover:bg-emerald-500 text-white font-medium shadow-md shadow-emerald-600/20 rounded-lg gap-1.5"
+                  className="h-8 px-2 sm:px-3 text-xs bg-emerald-600 hover:bg-emerald-500 text-white font-medium shadow-md shadow-emerald-600/20 rounded-lg gap-1 active:scale-95 transition-transform"
                   title="Create scheduled task (Gym, habit, checklist)"
                 >
-                  <Plus className="w-3.5 h-3.5" />
-                  <span>New Task</span>
+                  <Plus className="w-3.5 h-3.5 shrink-0" />
+                  <span><span className="hidden sm:inline">New </span>Task</span>
                 </Button>
 
+                {/* Mobile / Tablet About Button */}
+                <button
+                  type="button"
+                  onClick={() => setAboutOpen(true)}
+                  className="lg:hidden p-1.5 rounded-lg text-zinc-400 hover:text-white hover:bg-white/10 transition-colors"
+                  title="About Deto"
+                  aria-label="About Deto"
+                >
+                  <Info className="w-4 h-4" />
+                </button>
+
                 {/* Profile Pill */}
-                <div className="flex items-center gap-2 px-3 py-1 rounded-full border border-white/10 bg-zinc-900/80">
-                  <div className="w-5 h-5 rounded-full bg-indigo-600 text-white text-[11px] font-bold flex items-center justify-center">
+                <div className="flex items-center gap-1.5 sm:gap-2 pl-1.5 sm:pl-2 pr-1 sm:pr-2 py-0.5 sm:py-1 rounded-full border border-white/10 bg-zinc-900/80">
+                  <div className="w-5 h-5 rounded-full bg-indigo-600 text-white text-[11px] font-bold flex items-center justify-center shrink-0">
                     A
                   </div>
-                  <span className="text-xs text-zinc-300 font-medium">anurag</span>
+                  <span className="hidden md:inline text-xs text-zinc-300 font-medium">anurag</span>
                   <button
                     type="button"
                     onClick={handleLogout}
-                    className="text-zinc-500 hover:text-zinc-300 ml-1 p-0.5"
+                    className="text-zinc-500 hover:text-zinc-300 p-1"
                     title="Logout"
                   >
                     <LogOut className="w-3 h-3" />
@@ -477,21 +465,33 @@ export default function DetoApp() {
                 </div>
               </div>
             ) : (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setLoginOpen(true)}
-                className="h-8 px-3 text-xs border-white/10 bg-zinc-900/80 hover:bg-zinc-800 text-zinc-200 rounded-lg gap-1.5"
-              >
-                <LogIn className="w-3.5 h-3.5" />
-                <span>Owner Login</span>
-              </Button>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setAboutOpen(true)}
+                  className="lg:hidden p-1.5 rounded-lg text-zinc-400 hover:text-white hover:bg-white/10 transition-colors"
+                  title="About Deto"
+                  aria-label="About Deto"
+                >
+                  <Info className="w-4 h-4" />
+                </button>
+
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setLoginOpen(true)}
+                  className="h-8 px-3 text-xs border-white/10 bg-zinc-900/80 hover:bg-zinc-800 text-zinc-200 rounded-lg gap-1.5"
+                >
+                  <LogIn className="w-3.5 h-3.5" />
+                  <span>Owner Login</span>
+                </Button>
+              </div>
             )}
           </div>
         </header>
 
-        {/* Scrollable Main Area */}
-        <main className="flex-1 px-4 sm:px-8 py-8 max-w-6xl w-full mx-auto space-y-8 z-10">
+        {/* Scrollable Main Area - Responsive padding for mobile & tablets */}
+        <main className="flex-1 px-3 sm:px-6 lg:px-8 py-5 sm:py-8 max-w-6xl w-full mx-auto space-y-6 sm:space-y-8 z-10">
           {loadError && (
             <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-xs flex items-start gap-3">
               <AlertCircle className="w-5 h-5 shrink-0 mt-0.5" />
@@ -503,11 +503,11 @@ export default function DetoApp() {
           )}
 
           {/* Hero Typography Section */}
-          <div className="space-y-2">
-            <h1 className="text-3xl sm:text-5xl font-extrabold tracking-tight text-white leading-tight">
+          <div className="space-y-1.5 sm:space-y-2">
+            <h1 className="text-2xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-white leading-tight">
               Keep Moving,<br />Keep Evolving
             </h1>
-            <p className="text-sm sm:text-base text-zinc-400">
+            <p className="text-xs sm:text-sm md:text-base text-zinc-400 max-w-xl">
               Track your daily tasks, habits, and queue rotations so you never fall behind.
             </p>
           </div>

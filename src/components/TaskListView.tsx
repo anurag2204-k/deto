@@ -202,7 +202,7 @@ export function TaskListView({
                   </div>
 
                   {/* Right Header Buttons */}
-                  <div className="flex items-center gap-2 shrink-0 w-full sm:w-auto justify-end">
+                  <div className="flex flex-wrap items-center gap-2 shrink-0 w-full sm:w-auto justify-start sm:justify-end pt-2 sm:pt-0">
                     {/* View Calendar Button */}
                     <Button
                       variant="outline"

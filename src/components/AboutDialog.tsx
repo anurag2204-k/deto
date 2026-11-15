@@ -18,7 +18,7 @@ interface AboutDialogProps {
 export function AboutDialog({ open, onOpenChange }: AboutDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md bg-[#0f111a] border border-white/10 text-white shadow-2xl rounded-2xl">
+      <DialogContent className="w-[92vw] sm:max-w-md max-h-[90dvh] overflow-y-auto bg-[#0f111a] border border-white/10 text-white shadow-2xl rounded-2xl p-4 sm:p-6">
         <DialogHeader>
           <div className="flex items-center gap-2 mb-2">
             <div className="w-8 h-8 rounded-lg bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center text-indigo-400 font-bold">

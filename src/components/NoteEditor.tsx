@@ -505,25 +505,26 @@ export function NoteEditor({
           </div>
 
           <div className="flex items-center gap-2">
-            {/* View Mode switcher */}
-            <div className="hidden sm:flex items-center bg-zinc-900/80 border border-white/10 rounded-lg p-0.5 text-xs">
+            {/* View Mode switcher - Responsive for mobile (Write / Preview) and desktop (Write / Split / Preview) */}
+            <div className="flex items-center bg-zinc-900/80 border border-white/10 rounded-lg p-0.5 text-xs">
               <button
                 type="button"
                 onClick={() => setEditorMode('write')}
-                className={`px-2.5 py-1 rounded-md transition-all ${
+                className={`px-2 sm:px-2.5 py-1 rounded-md transition-all ${
                   editorMode === 'write'
                     ? 'bg-indigo-600 text-white font-medium shadow-xs'
                     : 'text-zinc-400 hover:text-zinc-200'
                 }`}
               >
-                <span className="flex items-center gap-1.5">
-                  <Edit3 className="w-3.5 h-3.5" /> Write
+                <span className="flex items-center gap-1 sm:gap-1.5">
+                  <Edit3 className="w-3.5 h-3.5" />
+                  <span>Write</span>
                 </span>
               </button>
               <button
                 type="button"
                 onClick={() => setEditorMode('split')}
-                className={`px-2.5 py-1 rounded-md transition-all ${
+                className={`hidden md:inline-flex px-2.5 py-1 rounded-md transition-all ${
                   editorMode === 'split'
                     ? 'bg-indigo-600 text-white font-medium shadow-xs'
                     : 'text-zinc-400 hover:text-zinc-200'
@@ -536,14 +537,15 @@ export function NoteEditor({
               <button
                 type="button"
                 onClick={() => setEditorMode('preview')}
-                className={`px-2.5 py-1 rounded-md transition-all ${
+                className={`px-2 sm:px-2.5 py-1 rounded-md transition-all ${
                   editorMode === 'preview'
                     ? 'bg-indigo-600 text-white font-medium shadow-xs'
                     : 'text-zinc-400 hover:text-zinc-200'
                 }`}
               >
-                <span className="flex items-center gap-1.5">
-                  <Eye className="w-3.5 h-3.5" /> Preview
+                <span className="flex items-center gap-1 sm:gap-1.5">
+                  <Eye className="w-3.5 h-3.5" />
+                  <span>Preview</span>
                 </span>
               </button>
             </div>
@@ -666,8 +668,8 @@ export function NoteEditor({
           </div>
         </div>
 
-        {/* Markdown Toolbar */}
-        <div className="flex flex-wrap items-center gap-1 p-1.5 bg-zinc-900/60 border border-white/10 rounded-xl text-zinc-300">
+        {/* Markdown Toolbar - Smooth horizontal touch scroll on mobile */}
+        <div className="flex items-center gap-1 p-1.5 bg-zinc-900/60 border border-white/10 rounded-xl text-zinc-300 overflow-x-auto touch-pan-x scrollbar-none">
           <Button
             type="button"
             variant="ghost"
