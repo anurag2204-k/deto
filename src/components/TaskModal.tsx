@@ -115,7 +115,7 @@ export function TaskModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-[95vw] sm:max-w-xl max-h-[90dvh] overflow-y-auto bg-zinc-950 border-white/10 text-white rounded-2xl p-4 sm:p-6">
+      <DialogContent className="w-[95vw] sm:max-w-xl max-h-[90dvh] overflow-y-auto bg-white dark:bg-zinc-950 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white rounded-2xl p-4 sm:p-6 shadow-2xl">
         <DialogHeader>
           <DialogTitle className="text-xl font-bold flex items-center gap-2">
             <span
@@ -124,13 +124,13 @@ export function TaskModal({
             />
             <span>{task ? 'Edit Task & Schedule' : 'Create New Task'}</span>
           </DialogTitle>
-          <DialogDescription className="text-xs text-zinc-400">
+          <DialogDescription className="text-xs text-slate-500 dark:text-zinc-400">
             Tasks track ongoing action routines like Gym sessions, habit cadences, and practice. Link your knowledge topics and to-do checklists.
           </DialogDescription>
         </DialogHeader>
 
         {error && (
-          <div className="p-3 text-xs text-red-400 bg-red-500/10 border border-red-500/20 rounded-xl">
+          <div className="p-3 text-xs text-red-500 dark:text-red-400 bg-red-500/10 border border-red-500/20 rounded-xl">
             {error}
           </div>
         )}
@@ -139,27 +139,27 @@ export function TaskModal({
           {/* Title & Description */}
           <div className="space-y-3">
             <div>
-              <label className="text-xs font-semibold text-zinc-300 block mb-1.5">
+              <label className="text-xs font-semibold text-slate-700 dark:text-zinc-300 block mb-1.5">
                 Task Title *
               </label>
               <Input
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 placeholder="e.g. Gym Workout, 5km Run, System Design Practice, LeetCode"
-                className="bg-zinc-900 border-white/10 text-sm text-white placeholder:text-zinc-600 rounded-xl focus:border-emerald-500"
+                className="bg-slate-50 dark:bg-zinc-900 border-slate-200 dark:border-white/10 text-sm text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-zinc-600 rounded-xl focus:border-emerald-500"
                 autoFocus
               />
             </div>
 
             <div>
-              <label className="text-xs font-semibold text-zinc-300 block mb-1.5">
+              <label className="text-xs font-semibold text-slate-700 dark:text-zinc-300 block mb-1.5">
                 Description / Motivation (Optional)
               </label>
               <Input
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 placeholder="e.g. Strength building 4x per week + progressive overload"
-                className="bg-zinc-900 border-white/10 text-xs text-zinc-300 placeholder:text-zinc-600 rounded-xl focus:border-emerald-500"
+                className="bg-slate-50 dark:bg-zinc-900 border-slate-200 dark:border-white/10 text-xs text-slate-800 dark:text-zinc-300 placeholder:text-slate-400 dark:placeholder:text-zinc-600 rounded-xl focus:border-emerald-500"
               />
             </div>
           </div>

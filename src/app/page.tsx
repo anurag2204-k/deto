@@ -18,9 +18,20 @@ import { QueueView } from '@/components/QueueView';
 import { DueView } from '@/components/DueView';
 import { TaskListView } from '@/components/TaskListView';
 import { TaskModal } from '@/components/TaskModal';
+import { TodoListView } from '@/components/TodoListView';
 import { ActivityCalendar } from '@/components/ActivityCalendar';
 import { AtmosphericBackdrop } from '@/components/AtmosphericBackdrop';
-import { ActivityMap, LightweightTopic, Task, RingColor, RingFrequency } from '@/lib/types';
+import { ThemeToggle } from '@/components/ThemeToggle';
+import { BurgerMenu } from '@/components/BurgerMenu';
+import {
+  ActivityMap,
+  LightweightTopic,
+  Task,
+  RingColor,
+  RingFrequency,
+  TodoFolder,
+  TodoItem,
+} from '@/lib/types';
 import {
   getMe,
   logout,
@@ -34,6 +45,13 @@ import {
   logTaskSession,
   toggleTaskTodo,
   addTaskTodo,
+  getTodos,
+  createTodoFolder,
+  updateTodoFolder,
+  deleteTodoFolder,
+  createTodoItem,
+  updateTodoItem,
+  deleteTodoItem,
   ApiError,
 } from '@/lib/api';
 import {
@@ -45,6 +63,9 @@ import {
   LogOut,
   AlertCircle,
   CheckSquare,
+  ListTodo,
+  Play,
+  Sparkles,
 } from 'lucide-react';
 
 function getLocalDateString(): string {
@@ -59,17 +80,20 @@ export default function DetoApp() {
   const router = useRouter();
   const [today, setToday] = useState('');
   const [isOwner, setIsOwner] = useState(false);
-  const [activeTab, setActiveTab] = useState<'queue' | 'due' | 'tasks'>('queue');
+  const [activeTab, setActiveTab] = useState<'queue' | 'due' | 'tasks' | 'todos'>('queue');
 
   // Topics & Tasks
   const [queueTopics, setQueueTopics] = useState<LightweightTopic[]>([]);
   const [dueTopics, setDueTopics] = useState<LightweightTopic[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
+  const [todoFolders, setTodoFolders] = useState<TodoFolder[]>([]);
+  const [todoItems, setTodoItems] = useState<TodoItem[]>([]);
   const [activityMap, setActivityMap] = useState<ActivityMap>({});
 
   const [loadingQueue, setLoadingQueue] = useState(true);
   const [loadingDue, setLoadingDue] = useState(true);
   const [loadingTasks, setLoadingTasks] = useState(true);
+  const [loadingTodos, setLoadingTodos] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
 
   // Dialogs
@@ -137,6 +161,19 @@ export default function DetoApp() {
     }
   }, []);
 
+  const fetchTodos = useCallback(async () => {
+    setLoadingTodos(true);
+    try {
+      const res = await getTodos();
+      setTodoFolders(res.folders || []);
+      setTodoItems(res.items || []);
+    } catch (err) {
+      console.error('Failed to load to-dos', err);
+    } finally {
+      setLoadingTodos(false);
+    }
+  }, []);
+
   const fetchActivity = useCallback(async () => {
     try {
       const act = await getActivity();
@@ -150,8 +187,9 @@ export default function DetoApp() {
     checkAuth();
     fetchQueue();
     fetchTasks();
+    fetchTodos();
     fetchActivity();
-  }, [checkAuth, fetchQueue, fetchTasks, fetchActivity]);
+  }, [checkAuth, fetchQueue, fetchTasks, fetchTodos, fetchActivity]);
 
   useEffect(() => {
     if (today) {
@@ -278,6 +316,101 @@ export default function DetoApp() {
     }
   };
 
+  // To-Do Actions
+  const handleCreateTodoFolder = async (data: { name: string; parentId: string | null; color: string }) => {
+    try {
+      const created = await createTodoFolder(data);
+      setTodoFolders((prev) => [...prev, created]);
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 401) {
+        setIsOwner(false);
+        setLoginOpen(true);
+      }
+      throw err;
+    }
+  };
+
+  const handleUpdateTodoFolder = async (
+    id: string,
+    data: { name?: string; parentId?: string | null; color?: string }
+  ) => {
+    try {
+      const updated = await updateTodoFolder(id, data);
+      setTodoFolders((prev) => prev.map((f) => (f._id === id ? updated : f)));
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 401) {
+        setIsOwner(false);
+        setLoginOpen(true);
+      }
+      throw err;
+    }
+  };
+
+  const handleDeleteTodoFolder = async (id: string) => {
+    try {
+      await deleteTodoFolder(id);
+      setTodoFolders((prev) => prev.filter((f) => f._id !== id && f.parentId !== id));
+      setTodoItems((prev) => prev.filter((i) => i.folderId !== id));
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 401) {
+        setIsOwner(false);
+        setLoginOpen(true);
+      }
+      throw err;
+    }
+  };
+
+  const handleCreateTodoItem = async (data: { text: string; folderId: string | null; notes?: string }) => {
+    try {
+      const created = await createTodoItem(data);
+      setTodoItems((prev) => [created, ...prev]);
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 401) {
+        setIsOwner(false);
+        setLoginOpen(true);
+      }
+      throw err;
+    }
+  };
+
+  const handleUpdateTodoItem = async (
+    id: string,
+    data: Partial<{
+      text: string;
+      done: boolean;
+      folderId: string | null;
+      notes?: string;
+      subtasks?: Array<{ id: string; text: string; done: boolean }>;
+    }>
+  ) => {
+    setTodoItems((prev) => prev.map((i) => (i._id === id ? { ...i, ...data } : i)));
+    try {
+      const updated = await updateTodoItem(id, data);
+      setTodoItems((prev) => prev.map((i) => (i._id === id ? updated : i)));
+    } catch (err) {
+      fetchTodos();
+      if (err instanceof ApiError && err.status === 401) {
+        setIsOwner(false);
+        setLoginOpen(true);
+      }
+      throw err;
+    }
+  };
+
+  const handleDeleteTodoItem = async (id: string) => {
+    setTodoItems((prev) => prev.filter((i) => i._id !== id));
+    try {
+      await deleteTodoItem(id);
+    } catch (err) {
+      fetchTodos();
+      if (err instanceof ApiError && err.status === 401) {
+        setIsOwner(false);
+        setLoginOpen(true);
+      }
+      throw err;
+    }
+  };
+
   const openNewNotePage = () => {
     router.push('/topics/new');
   };
@@ -294,18 +427,19 @@ export default function DetoApp() {
   const pendingTasksCount = !today
     ? 0
     : tasks.filter((t) => !(t.history || []).includes(today)).length;
+  const pendingTodosCount = todoItems.filter((i) => !i.done).length;
 
   return (
-    <div className="min-h-screen flex bg-[#090a10] text-[#f8fafc]">
-      {/* DESKTOP SIDEBAR NAVIGATION - Visible on desktop (lg: 1024px+); hidden on tablets (iPad Mini 768px) & mobile to give maximum room */}
-      <aside className="hidden lg:flex flex-col justify-between w-64 h-screen sticky top-0 border-r border-white/5 bg-[#090a10]/80 backdrop-blur-xl p-6 shrink-0 z-20">
+    <div className="min-h-screen flex bg-slate-50 dark:bg-[#090a10] text-slate-900 dark:text-[#f8fafc] transition-colors duration-200">
+      {/* DESKTOP SIDEBAR NAVIGATION - Visible on desktop (lg: 1024px+); hidden on tablets (iPad Mini 768px) & mobile */}
+      <aside className="hidden lg:flex flex-col justify-between w-64 h-screen sticky top-0 border-r border-slate-200/80 dark:border-white/5 bg-white/80 dark:bg-[#090a10]/80 backdrop-blur-xl p-6 shrink-0 z-20 transition-colors">
         <div>
-          {/* Brand Logo */}
+          {/* Brand Logo & Title */}
           <div className="flex items-center gap-3 mb-10">
-            <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-indigo-500/20 via-emerald-500/10 to-amber-500/20 border border-white/10 flex items-center justify-center text-indigo-400 font-bold text-lg shadow-sm">
+            <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-indigo-500/15 via-emerald-500/10 to-amber-500/15 dark:from-indigo-500/20 dark:via-emerald-500/10 dark:to-amber-500/20 border border-slate-200 dark:border-white/10 flex items-center justify-center text-indigo-600 dark:text-indigo-400 font-bold text-lg shadow-sm">
               ∞
             </div>
-            <span className="text-xl font-bold tracking-tight text-white">Deto</span>
+            <span className="text-xl font-bold tracking-tight text-slate-900 dark:text-white">Deto</span>
           </div>
 
           {/* Navigation Items */}
@@ -315,12 +449,12 @@ export default function DetoApp() {
               onClick={() => setActiveTab('queue')}
               className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all ${
                 activeTab === 'queue'
-                  ? 'bg-indigo-950/50 border border-indigo-500/30 text-white shadow-sm shadow-indigo-500/10'
-                  : 'text-zinc-400 hover:text-white hover:bg-white/5'
+                  ? 'bg-indigo-50 border border-indigo-200 text-indigo-900 shadow-xs dark:bg-indigo-950/50 dark:border-indigo-500/30 dark:text-white dark:shadow-indigo-500/10'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100 dark:text-zinc-400 dark:hover:text-white dark:hover:bg-white/5'
               }`}
             >
               <div className="flex items-center gap-3">
-                <Layers className={`w-4 h-4 ${activeTab === 'queue' ? 'text-indigo-400' : 'text-zinc-400'}`} />
+                <Layers className={`w-4 h-4 ${activeTab === 'queue' ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-400 dark:text-zinc-400'}`} />
                 <span>Queue</span>
               </div>
               {pendingQueueCount > 0 && (
@@ -335,12 +469,12 @@ export default function DetoApp() {
               onClick={() => setActiveTab('due')}
               className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all ${
                 activeTab === 'due'
-                  ? 'bg-indigo-950/50 border border-indigo-500/30 text-white shadow-sm shadow-indigo-500/10'
-                  : 'text-zinc-400 hover:text-white hover:bg-white/5'
+                  ? 'bg-indigo-50 border border-indigo-200 text-indigo-900 shadow-xs dark:bg-indigo-950/50 dark:border-indigo-500/30 dark:text-white dark:shadow-indigo-500/10'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100 dark:text-zinc-400 dark:hover:text-white dark:hover:bg-white/5'
               }`}
             >
               <div className="flex items-center gap-3">
-                <Calendar className={`w-4 h-4 ${activeTab === 'due' ? 'text-indigo-400' : 'text-zinc-400'}`} />
+                <Calendar className={`w-4 h-4 ${activeTab === 'due' ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-400 dark:text-zinc-400'}`} />
                 <span>Due</span>
               </div>
               {dueTopics.length > 0 && (
@@ -355,12 +489,12 @@ export default function DetoApp() {
               onClick={() => setActiveTab('tasks')}
               className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all ${
                 activeTab === 'tasks'
-                  ? 'bg-emerald-950/40 border border-emerald-500/30 text-white shadow-sm shadow-emerald-500/10'
-                  : 'text-zinc-400 hover:text-white hover:bg-white/5'
+                  ? 'bg-emerald-50 border border-emerald-200 text-emerald-900 shadow-xs dark:bg-emerald-950/40 dark:border-emerald-500/30 dark:text-white dark:shadow-emerald-500/10'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100 dark:text-zinc-400 dark:hover:text-white dark:hover:bg-white/5'
               }`}
             >
               <div className="flex items-center gap-3">
-                <CheckSquare className={`w-4 h-4 ${activeTab === 'tasks' ? 'text-emerald-400' : 'text-zinc-400'}`} />
+                <CheckSquare className={`w-4 h-4 ${activeTab === 'tasks' ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-400 dark:text-zinc-400'}`} />
                 <span>Tasks &amp; Habits</span>
               </div>
               {pendingTasksCount > 0 && (
@@ -372,19 +506,58 @@ export default function DetoApp() {
 
             <button
               type="button"
-              onClick={() => setAboutOpen(true)}
-              className="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium text-zinc-400 hover:text-white hover:bg-white/5 transition-all"
+              onClick={() => setActiveTab('todos')}
+              className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all ${
+                activeTab === 'todos'
+                  ? 'bg-indigo-50 border border-indigo-200 text-indigo-900 shadow-xs dark:bg-indigo-950/50 dark:border-indigo-500/30 dark:text-white dark:shadow-indigo-500/10'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100 dark:text-zinc-400 dark:hover:text-white dark:hover:bg-white/5'
+              }`}
             >
-              <Info className="w-4 h-4 text-zinc-400" />
+              <div className="flex items-center gap-3">
+                <ListTodo className={`w-4 h-4 ${activeTab === 'todos' ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-400 dark:text-zinc-400'}`} />
+                <span>To-Dos</span>
+              </div>
+              {pendingTodosCount > 0 && (
+                <Badge className="bg-indigo-600 text-white text-[11px] px-2 py-0 font-semibold shadow-xs">
+                  {pendingTodosCount}
+                </Badge>
+              )}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => router.push('/summarize')}
+              className="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all text-slate-600 hover:text-slate-900 hover:bg-slate-100 dark:text-zinc-400 dark:hover:text-white dark:hover:bg-white/5 group"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-5 h-5 rounded-lg bg-gradient-to-tr from-rose-600 to-indigo-600 flex items-center justify-center text-white shrink-0 shadow-xs shadow-rose-500/20 group-hover:scale-105 transition-transform">
+                  <Play className="w-2.5 h-2.5 fill-current ml-0.5" />
+                </div>
+                <span>Summarize Video</span>
+              </div>
+              <Badge variant="outline" className="text-[10px] py-0 px-1.5 text-indigo-600 dark:text-indigo-400 border-indigo-200 dark:border-indigo-500/30 font-medium">
+                AI
+              </Badge>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setAboutOpen(true)}
+              className="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 dark:text-zinc-400 dark:hover:text-white dark:hover:bg-white/5 transition-all"
+            >
+              <Info className="w-4 h-4 text-slate-400 dark:text-zinc-400" />
               <span>About</span>
             </button>
           </nav>
         </div>
 
-        {/* Sidebar Footer - Always pinned at bottom */}
-        <div className="pt-6 border-t border-white/5 flex items-center justify-between text-xs text-zinc-500">
-          <span>A personal task &amp; habit tracker</span>
-          <span className="text-indigo-400 font-bold">∞</span>
+        {/* Sidebar Footer - Theme Toggle + App Info pinned at bottom */}
+        <div className="pt-4 border-t border-slate-200/80 dark:border-white/5 flex items-center justify-between text-xs text-slate-500 dark:text-zinc-500">
+          <div className="flex items-center gap-2">
+            <ThemeToggle />
+            <span className="truncate">Theme</span>
+          </div>
+          <span className="text-indigo-600 dark:text-indigo-400 font-bold">∞</span>
         </div>
       </aside>
 
@@ -393,107 +566,106 @@ export default function DetoApp() {
         {/* Mountain Atmosphere Graphic in Top Right */}
         <AtmosphericBackdrop />
 
-        {/* Top Header / Profile Bar - Fully responsive on Samsung Ultra & iPad Mini */}
-        <header className="sticky top-0 z-30 px-3.5 sm:px-6 py-2.5 sm:py-3.5 flex items-center justify-between bg-[#090a10]/60 backdrop-blur-md border-b border-white/5">
+        {/* Top Header / Profile Bar */}
+        <header className="sticky top-0 z-30 px-3.5 sm:px-6 py-2.5 sm:py-3.5 flex items-center justify-between bg-white/70 dark:bg-[#090a10]/60 backdrop-blur-md border-b border-slate-200/80 dark:border-white/5 transition-colors">
           {/* Brand header on mobile & tablet */}
           <div className="flex items-center gap-2 lg:hidden">
-            <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-indigo-500/20 via-emerald-500/10 to-amber-500/20 border border-white/10 flex items-center justify-center text-indigo-400 font-bold text-sm shadow-xs">
+            <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-indigo-500/15 via-emerald-500/10 to-amber-500/15 dark:from-indigo-500/20 dark:via-emerald-500/10 dark:to-amber-500/20 border border-slate-200 dark:border-white/10 flex items-center justify-center text-indigo-600 dark:text-indigo-400 font-bold text-sm shadow-xs">
               ∞
             </div>
-            <span className="font-bold text-base sm:text-lg text-white tracking-tight">Deto</span>
+            <span className="font-bold text-base sm:text-lg text-slate-900 dark:text-white tracking-tight">Deto</span>
           </div>
 
-          <div className="hidden lg:flex items-center gap-2 text-xs text-zinc-400 font-mono">
+          <div className="hidden lg:flex items-center gap-2 text-xs text-slate-500 dark:text-zinc-400 font-mono">
             {today && <span>{today}</span>}
           </div>
 
-          {/* Right Header Buttons: Responsive spacing for Samsung Ultra, iPhone & iPad */}
+          {/* Right Header Buttons */}
           <div className="flex items-center gap-1.5 sm:gap-2.5 ml-auto">
-            {isOwner ? (
-              <div className="flex items-center gap-1.5 sm:gap-2.5">
-                {/* Create Topic Button */}
-                <Button
-                  onClick={openNewNotePage}
-                  size="sm"
-                  variant="outline"
-                  className="h-8 px-2 sm:px-3 text-xs border-white/10 bg-white/5 hover:bg-white/10 text-zinc-200 font-medium rounded-lg gap-1 active:scale-95 transition-transform"
-                  title="Create study notes / topic in queue"
-                >
-                  <Plus className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
-                  <span><span className="hidden sm:inline">New </span>Topic</span>
-                </Button>
+            {/* Create Topic Button (Owner only) */}
+            {isOwner && (
+              <Button
+                onClick={openNewNotePage}
+                size="sm"
+                variant="outline"
+                className="h-8 px-2.5 sm:px-3 text-xs border-slate-200 dark:border-white/10 bg-slate-100/70 dark:bg-white/5 hover:bg-slate-200/70 dark:hover:bg-white/10 text-slate-800 dark:text-zinc-200 font-medium rounded-xl gap-1 active:scale-95 transition-transform"
+                title="Create study notes / topic in queue"
+              >
+                <Plus className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400 shrink-0" />
+                <span><span className="hidden sm:inline">New </span>Topic</span>
+              </Button>
+            )}
 
-                {/* Create Task Button */}
-                <Button
-                  onClick={() => {
-                    setEditingTask(null);
-                    setTaskModalOpen(true);
-                  }}
-                  size="sm"
-                  className="h-8 px-2 sm:px-3 text-xs bg-emerald-600 hover:bg-emerald-500 text-white font-medium shadow-md shadow-emerald-600/20 rounded-lg gap-1 active:scale-95 transition-transform"
-                  title="Create scheduled task (Gym, habit, checklist)"
-                >
-                  <Plus className="w-3.5 h-3.5 shrink-0" />
-                  <span><span className="hidden sm:inline">New </span>Task</span>
-                </Button>
+            {/* Create Task Button (Owner only) */}
+            {isOwner && (
+              <Button
+                onClick={() => {
+                  setEditingTask(null);
+                  setTaskModalOpen(true);
+                }}
+                size="sm"
+                className="h-8 px-2.5 sm:px-3 text-xs bg-emerald-600 hover:bg-emerald-500 text-white font-medium shadow-md shadow-emerald-600/20 rounded-xl gap-1 active:scale-95 transition-transform"
+                title="Create scheduled task (Gym, habit, checklist)"
+              >
+                <Plus className="w-3.5 h-3.5 shrink-0" />
+                <span><span className="hidden sm:inline">New </span>Task</span>
+              </Button>
+            )}
 
-                {/* Mobile / Tablet About Button */}
-                <button
-                  type="button"
-                  onClick={() => setAboutOpen(true)}
-                  className="lg:hidden p-1.5 rounded-lg text-zinc-400 hover:text-white hover:bg-white/10 transition-colors"
-                  title="About Deto"
-                  aria-label="About Deto"
-                >
-                  <Info className="w-4 h-4" />
-                </button>
+            {/* DESKTOP ONLY: Theme toggle & Profile pill (hidden on mobile/tablet) */}
+            <div className="hidden lg:flex items-center gap-2.5">
+              <ThemeToggle />
 
-                {/* Profile Pill */}
-                <div className="flex items-center gap-1.5 sm:gap-2 pl-1.5 sm:pl-2 pr-1 sm:pr-2 py-0.5 sm:py-1 rounded-full border border-white/10 bg-zinc-900/80">
+              {isOwner ? (
+                <div className="flex items-center gap-2 pl-2 pr-1.5 py-1 rounded-full border border-slate-200 dark:border-white/10 bg-slate-100 dark:bg-zinc-900/80">
                   <div className="w-5 h-5 rounded-full bg-indigo-600 text-white text-[11px] font-bold flex items-center justify-center shrink-0">
                     A
                   </div>
-                  <span className="hidden md:inline text-xs text-zinc-300 font-medium">anurag</span>
+                  <span className="text-xs text-slate-700 dark:text-zinc-300 font-medium">anurag</span>
                   <button
                     type="button"
                     onClick={handleLogout}
-                    className="text-zinc-500 hover:text-zinc-300 p-1"
+                    className="text-slate-400 dark:text-zinc-500 hover:text-rose-600 dark:hover:text-rose-400 p-1 transition-colors"
                     title="Logout"
                   >
-                    <LogOut className="w-3 h-3" />
+                    <LogOut className="w-3.5 h-3.5" />
                   </button>
                 </div>
-              </div>
-            ) : (
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => setAboutOpen(true)}
-                  className="lg:hidden p-1.5 rounded-lg text-zinc-400 hover:text-white hover:bg-white/10 transition-colors"
-                  title="About Deto"
-                  aria-label="About Deto"
-                >
-                  <Info className="w-4 h-4" />
-                </button>
-
+              ) : (
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={() => setLoginOpen(true)}
-                  className="h-8 px-3 text-xs border-white/10 bg-zinc-900/80 hover:bg-zinc-800 text-zinc-200 rounded-lg gap-1.5"
+                  className="h-8 px-3 text-xs border-slate-200 dark:border-white/10 bg-white dark:bg-zinc-900/80 hover:bg-slate-100 dark:hover:bg-zinc-800 text-slate-800 dark:text-zinc-200 rounded-lg gap-1.5"
                 >
                   <LogIn className="w-3.5 h-3.5" />
                   <span>Owner Login</span>
                 </Button>
-              </div>
-            )}
+              )}
+            </div>
+
+            {/* MOBILE ONLY: Hamburger Menu (hidden on desktop screens lg: 1024px+) */}
+            <div className="lg:hidden">
+              <BurgerMenu
+                isOwner={isOwner}
+                onLogout={handleLogout}
+                onOpenLogin={() => setLoginOpen(true)}
+                onOpenAbout={() => setAboutOpen(true)}
+                activeTab={activeTab}
+                onSelectTab={setActiveTab}
+                pendingQueueCount={pendingQueueCount}
+                dueTopicsCount={dueTopics.length}
+                pendingTasksCount={pendingTasksCount}
+                pendingTodosCount={pendingTodosCount}
+              />
+            </div>
           </div>
         </header>
 
-        {/* Scrollable Main Area - Responsive padding for mobile & tablets */}
+        {/* Scrollable Main Area */}
         <main className="flex-1 px-3 sm:px-6 lg:px-8 py-5 sm:py-8 max-w-6xl w-full mx-auto space-y-6 sm:space-y-8 z-10">
           {loadError && (
-            <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-xs flex items-start gap-3">
+            <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-500 dark:text-red-400 text-xs flex items-start gap-3">
               <AlertCircle className="w-5 h-5 shrink-0 mt-0.5" />
               <div>
                 <p className="font-semibold text-sm">Database Connection Error</p>
@@ -504,10 +676,10 @@ export default function DetoApp() {
 
           {/* Hero Typography Section */}
           <div className="space-y-1.5 sm:space-y-2">
-            <h1 className="text-2xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-white leading-tight">
+            <h1 className="text-2xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-slate-900 dark:text-white leading-tight">
               Keep Moving,<br />Keep Evolving
             </h1>
-            <p className="text-xs sm:text-sm md:text-base text-zinc-400 max-w-xl">
+            <p className="text-xs sm:text-sm md:text-base text-slate-600 dark:text-zinc-400 max-w-xl">
               Track your daily tasks, habits, and queue rotations so you never fall behind.
             </p>
           </div>
@@ -528,25 +700,25 @@ export default function DetoApp() {
           />
 
           {/* View Switcher Tabs (Queue | Due | Tasks & Habits) */}
-          <div className="flex items-center gap-6 border-b border-white/10 pb-3">
+          <div className="flex items-center gap-6 border-b border-slate-200 dark:border-white/10 pb-3">
             <button
               type="button"
               onClick={() => setActiveTab('queue')}
               className={`flex items-center gap-2 pb-2 text-sm font-medium transition-all relative ${
                 activeTab === 'queue'
-                  ? 'text-white'
-                  : 'text-zinc-400 hover:text-zinc-200'
+                  ? 'text-slate-900 dark:text-white font-semibold'
+                  : 'text-slate-500 hover:text-slate-800 dark:text-zinc-400 dark:hover:text-zinc-200'
               }`}
             >
-              <Layers className="w-4 h-4 text-indigo-400" />
+              <Layers className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
               <span>Queue</span>
               {pendingQueueCount > 0 && (
-                <span className="text-[11px] px-1.5 py-0.2 rounded-md bg-indigo-500/20 text-indigo-300 font-semibold border border-indigo-500/30">
+                <span className="text-[11px] px-1.5 py-0.2 rounded-md bg-indigo-500/10 text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-300 font-semibold border border-indigo-500/20 dark:border-indigo-500/30">
                   {pendingQueueCount}
                 </span>
               )}
               {activeTab === 'queue' && (
-                <div className="absolute -bottom-3 left-0 right-0 h-0.5 bg-indigo-500 shadow-[0_0_10px_#6366f1]" />
+                <div className="absolute -bottom-3 left-0 right-0 h-0.5 bg-indigo-600 dark:bg-indigo-500 shadow-[0_0_10px_#6366f1]" />
               )}
             </button>
 
@@ -555,11 +727,11 @@ export default function DetoApp() {
               onClick={() => setActiveTab('due')}
               className={`flex items-center gap-2 pb-2 text-sm font-medium transition-all relative ${
                 activeTab === 'due'
-                  ? 'text-white'
-                  : 'text-zinc-400 hover:text-zinc-200'
+                  ? 'text-slate-900 dark:text-white font-semibold'
+                  : 'text-slate-500 hover:text-slate-800 dark:text-zinc-400 dark:hover:text-zinc-200'
               }`}
             >
-              <Calendar className="w-4 h-4 text-indigo-400" />
+              <Calendar className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
               <span>Due</span>
               {dueTopics.length > 0 && (
                 <Badge className="bg-indigo-600 text-white text-[10px] px-1.5 py-0 ml-1">
@@ -567,7 +739,7 @@ export default function DetoApp() {
                 </Badge>
               )}
               {activeTab === 'due' && (
-                <div className="absolute -bottom-3 left-0 right-0 h-0.5 bg-indigo-500 shadow-[0_0_10px_#6366f1]" />
+                <div className="absolute -bottom-3 left-0 right-0 h-0.5 bg-indigo-600 dark:bg-indigo-500 shadow-[0_0_10px_#6366f1]" />
               )}
             </button>
 
@@ -576,19 +748,40 @@ export default function DetoApp() {
               onClick={() => setActiveTab('tasks')}
               className={`flex items-center gap-2 pb-2 text-sm font-medium transition-all relative ${
                 activeTab === 'tasks'
-                  ? 'text-white'
-                  : 'text-zinc-400 hover:text-zinc-200'
+                  ? 'text-slate-900 dark:text-white font-semibold'
+                  : 'text-slate-500 hover:text-slate-800 dark:text-zinc-400 dark:hover:text-zinc-200'
               }`}
             >
-              <CheckSquare className="w-4 h-4 text-emerald-400" />
+              <CheckSquare className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
               <span>Tasks &amp; Habits</span>
               {pendingTasksCount > 0 && (
-                <Badge className="bg-emerald-500 text-white text-[10px] px-1.5 py-0 ml-1">
+                <Badge className="bg-emerald-600 dark:bg-emerald-500 text-white text-[10px] px-1.5 py-0 ml-1">
                   {pendingTasksCount}
                 </Badge>
               )}
               {activeTab === 'tasks' && (
-                <div className="absolute -bottom-3 left-0 right-0 h-0.5 bg-emerald-500 shadow-[0_0_10px_#10b981]" />
+                <div className="absolute -bottom-3 left-0 right-0 h-0.5 bg-emerald-600 dark:bg-emerald-500 shadow-[0_0_10px_#10b981]" />
+              )}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setActiveTab('todos')}
+              className={`flex items-center gap-2 pb-2 text-sm font-medium transition-all relative ${
+                activeTab === 'todos'
+                  ? 'text-slate-900 dark:text-white font-semibold'
+                  : 'text-slate-500 hover:text-slate-800 dark:text-zinc-400 dark:hover:text-zinc-200'
+              }`}
+            >
+              <ListTodo className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+              <span>To-Dos</span>
+              {pendingTodosCount > 0 && (
+                <Badge className="bg-indigo-600 text-white text-[10px] px-1.5 py-0 ml-1">
+                  {pendingTodosCount}
+                </Badge>
+              )}
+              {activeTab === 'todos' && (
+                <div className="absolute -bottom-3 left-0 right-0 h-0.5 bg-indigo-600 dark:bg-indigo-500 shadow-[0_0_10px_#6366f1]" />
               )}
             </button>
           </div>
@@ -635,33 +828,51 @@ export default function DetoApp() {
                 }}
               />
             )
-          ) : loadingTasks ? (
+          ) : activeTab === 'tasks' ? (
+            loadingTasks ? (
+              <div className="py-20 text-center text-sm text-zinc-500">
+                Loading tasks &amp; habits...
+              </div>
+            ) : (
+              <TaskListView
+                tasks={tasks}
+                topics={queueTopics}
+                today={today}
+                isOwner={isOwner}
+                onLogSession={handleLogTaskSession}
+                onToggleTodo={handleToggleTaskTodo}
+                onAddTodo={handleAddTaskTodo}
+                onEditTask={(task) => {
+                  setEditingTask(task);
+                  setTaskModalOpen(true);
+                }}
+                onDeleteTask={handleDeleteTask}
+                onOpenCreateTask={() => {
+                  setEditingTask(null);
+                  setTaskModalOpen(true);
+                }}
+                onOpenTopic={openTopicPage}
+                onSelectTaskInCalendar={(taskId) => {
+                  setSelectedCalendarTaskId(taskId);
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                }}
+              />
+            )
+          ) : loadingTodos ? (
             <div className="py-20 text-center text-sm text-zinc-500">
-              Loading tasks &amp; habits...
+              Loading to-do lists...
             </div>
           ) : (
-            <TaskListView
-              tasks={tasks}
-              topics={queueTopics}
-              today={today}
+            <TodoListView
+              folders={todoFolders}
+              items={todoItems}
               isOwner={isOwner}
-              onLogSession={handleLogTaskSession}
-              onToggleTodo={handleToggleTaskTodo}
-              onAddTodo={handleAddTaskTodo}
-              onEditTask={(task) => {
-                setEditingTask(task);
-                setTaskModalOpen(true);
-              }}
-              onDeleteTask={handleDeleteTask}
-              onOpenCreateTask={() => {
-                setEditingTask(null);
-                setTaskModalOpen(true);
-              }}
-              onOpenTopic={openTopicPage}
-              onSelectTaskInCalendar={(taskId) => {
-                setSelectedCalendarTaskId(taskId);
-                window.scrollTo({ top: 0, behavior: 'smooth' });
-              }}
+              onCreateFolder={handleCreateTodoFolder}
+              onUpdateFolder={handleUpdateTodoFolder}
+              onDeleteFolder={handleDeleteTodoFolder}
+              onCreateItem={handleCreateTodoItem}
+              onUpdateItem={handleUpdateTodoItem}
+              onDeleteItem={handleDeleteTodoItem}
             />
           )}
         </main>
@@ -682,10 +893,10 @@ export default function DetoApp() {
         open={!!deleteTopicTarget}
         onOpenChange={(open) => !open && setDeleteTopicTarget(null)}
       >
-        <DialogContent className="sm:max-w-[420px] bg-[#0f111a] border border-white/10 text-white rounded-2xl">
+        <DialogContent className="sm:max-w-[420px] bg-white dark:bg-[#0f111a] border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white rounded-2xl shadow-2xl">
           <DialogHeader>
-            <DialogTitle className="text-white">Delete Topic</DialogTitle>
-            <DialogDescription className="text-zinc-400 text-xs">
+            <DialogTitle className="text-slate-900 dark:text-white">Delete Topic</DialogTitle>
+            <DialogDescription className="text-slate-500 dark:text-zinc-400 text-xs">
               Are you sure you want to permanently delete &ldquo;
               {deleteTopicTarget?.title}&rdquo;?
               This will remove its notes and attachments from storage. This action cannot be undone.
@@ -697,7 +908,7 @@ export default function DetoApp() {
               size="sm"
               onClick={() => setDeleteTopicTarget(null)}
               disabled={isDeleting}
-              className="text-xs border-white/10 bg-zinc-900 text-zinc-300 hover:bg-zinc-800"
+              className="text-xs border-slate-200 dark:border-white/10 bg-slate-100 hover:bg-slate-200 dark:bg-zinc-900 dark:hover:bg-zinc-800 text-slate-700 dark:text-zinc-300"
             >
               Cancel
             </Button>
@@ -722,6 +933,7 @@ export default function DetoApp() {
           setIsOwner(true);
           fetchQueue();
           fetchTasks();
+          fetchTodos();
           fetchActivity();
         }}
       />

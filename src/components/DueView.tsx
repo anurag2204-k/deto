@@ -69,12 +69,12 @@ export function DueView({
 
   if (topics.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-20 px-4 text-center rounded-2xl border border-white/10 bg-zinc-950/40 backdrop-blur-md shadow-xs">
-        <div className="w-14 h-14 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 flex items-center justify-center mb-4 shadow-lg shadow-emerald-500/10">
+      <div className="flex flex-col items-center justify-center py-20 px-4 text-center rounded-2xl border border-slate-200/80 dark:border-white/10 bg-white/80 dark:bg-zinc-950/40 backdrop-blur-md shadow-xs">
+        <div className="w-14 h-14 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mb-4 shadow-lg shadow-emerald-500/10">
           <CheckCircle2 className="w-7 h-7" />
         </div>
-        <h3 className="text-xl font-bold tracking-tight text-white">All Caught Up!</h3>
-        <p className="text-sm text-zinc-400 max-w-sm mt-2">
+        <h3 className="text-xl font-bold tracking-tight text-slate-900 dark:text-white">All Caught Up!</h3>
+        <p className="text-sm text-slate-600 dark:text-zinc-400 max-w-sm mt-2">
           Nothing due for revision today. Your spaced repetitions will prompt you automatically according to your 1 → 3 → 7 → 14 → 30 day cycle.
         </p>
       </div>
@@ -84,21 +84,21 @@ export function DueView({
   return (
     <div className="space-y-4">
       {error && (
-        <div className="p-3 text-sm text-red-400 bg-red-500/10 rounded-xl border border-red-500/20">
+        <div className="p-3 text-sm text-red-600 dark:text-red-400 bg-red-500/10 rounded-xl border border-red-500/20">
           {error}
         </div>
       )}
 
       <div className="flex items-center justify-between pb-1">
         <div>
-          <h3 className="text-base sm:text-lg font-bold tracking-tight text-white">
+          <h3 className="text-base sm:text-lg font-bold tracking-tight text-slate-900 dark:text-white">
             Due for Spaced Revision ({topics.length})
           </h3>
-          <p className="text-xs text-zinc-400 mt-0.5">
+          <p className="text-xs text-slate-600 dark:text-zinc-400 mt-0.5">
             Arranged with most overdue topics first.
           </p>
         </div>
-        <span className="text-xs text-zinc-500 font-mono">{today}</span>
+        <span className="text-xs text-slate-500 dark:text-zinc-500 font-mono">{today}</span>
       </div>
 
       <div className="space-y-2.5">
@@ -111,24 +111,24 @@ export function DueView({
           return (
             <div
               key={topic._id}
-              className={`rounded-xl border transition-all duration-150 overflow-hidden bg-zinc-950/70 backdrop-blur-md ${
+              className={`rounded-xl border transition-all duration-150 overflow-hidden bg-white dark:bg-zinc-950/70 backdrop-blur-md ${
                 isExpanded
-                  ? 'border-indigo-500/50 shadow-md shadow-indigo-500/5'
-                  : 'border-white/5 hover:border-indigo-500/30'
+                  ? 'border-indigo-400 dark:border-indigo-500/50 shadow-sm shadow-indigo-100 dark:shadow-indigo-500/5'
+                  : 'border-slate-200/80 dark:border-white/5 hover:border-indigo-300 dark:hover:border-indigo-500/30'
               }`}
             >
               <div
-                className="flex items-center justify-between p-4 cursor-pointer hover:bg-white/[0.02] transition-colors select-none"
+                className="flex items-center justify-between p-4 cursor-pointer hover:bg-slate-50/80 dark:hover:bg-white/[0.02] transition-colors select-none"
                 onClick={() => toggleExpand(topic._id)}
               >
                 <div className="flex items-center gap-3 min-w-0 pr-3">
                   <button
                     type="button"
-                    className="text-zinc-500 hover:text-zinc-300 shrink-0"
+                    className="text-slate-400 dark:text-zinc-500 hover:text-slate-600 dark:hover:text-zinc-300 shrink-0"
                     aria-label={isExpanded ? 'Collapse topic' : 'Expand topic'}
                   >
                     {isExpanded ? (
-                      <ChevronDown className="w-4 h-4 text-indigo-400" />
+                      <ChevronDown className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
                     ) : (
                       <ChevronRight className="w-4 h-4" />
                     )}
@@ -137,13 +137,13 @@ export function DueView({
                   <TopicArtwork title={topic.title} size="sm" />
 
                   <div className="truncate">
-                    <h4 className="font-medium text-sm text-zinc-100 truncate">
+                    <h4 className="font-medium text-sm text-slate-900 dark:text-zinc-100 truncate">
                       {topic.title}
                     </h4>
-                    <div className="flex items-center gap-2 mt-0.5 text-xs text-zinc-500">
+                    <div className="flex items-center gap-2 mt-0.5 text-xs text-slate-500 dark:text-zinc-500">
                       <TopicCategoryBadge title={topic.title} />
                       <span className="inline-flex items-center gap-1">
-                        <Calendar className="w-3 h-3 text-zinc-600" />
+                        <Calendar className="w-3 h-3 text-slate-400 dark:text-zinc-600" />
                         Studied {topic.studiedOn}
                       </span>
                     </div>
@@ -151,7 +151,7 @@ export function DueView({
                 </div>
 
                 <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
-                  <Badge className="bg-zinc-900 border border-white/10 text-zinc-400 text-[11px] sm:text-xs font-normal px-1.5 sm:px-2.5">
+                  <Badge className="bg-slate-100 dark:bg-zinc-900 border border-slate-200 dark:border-white/10 text-slate-600 dark:text-zinc-400 text-[11px] sm:text-xs font-normal px-1.5 sm:px-2.5">
                     <span className="hidden sm:inline">Revision </span>#{currentRevisionNumber}
                   </Badge>
 

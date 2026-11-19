@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -13,7 +13,8 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { MarkdownRenderer } from '@/components/MarkdownRenderer';
-import { SlashMentionMenu, CommandOption } from '@/components/SlashMentionMenu';
+import { SlashMentionMenu, CommandOption, getAvailableSlashCommands } from '@/components/SlashMentionMenu';
+import { ThemeToggle } from './ThemeToggle';
 import { Topic, TopicFile, TopicLink, RingColor, RingFrequency, RingSettings, ALLOWED_MIME, MAX_FILE_BYTES } from '@/lib/types';
 import { RING_COLORS } from '@/lib/logic';
 import { uploadFile, deleteFile } from '@/lib/api';
@@ -48,7 +49,7 @@ import {
 } from 'lucide-react';
 
 interface NoteEditorProps {
-  initialTopic?: Partial<Topic>;
+  initialTopic?: Topic | null;
   isEditing?: boolean;
   onSave: (data: {
     title: string;
@@ -76,21 +77,26 @@ function formatBytes(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-// Caret coordinate calculator for positioning the / or @ dropdown
-function getCaretCoordinates(textarea: HTMLTextAreaElement, position: number) {
+/**
+ * Calculates (top, left) coordinates for the caret in an HTML textarea
+ * so floating suggestion menus align directly next to the cursor.
+ */
+function getCaretCoordinates(element: HTMLTextAreaElement, position: number) {
   const div = document.createElement('div');
-  const computed = window.getComputedStyle(textarea);
+  const style = window.getComputedStyle(element);
 
   const properties = [
     'direction',
     'boxSizing',
     'width',
+    'height',
     'overflowX',
     'overflowY',
     'borderTopWidth',
     'borderRightWidth',
     'borderBottomWidth',
     'borderLeftWidth',
+    'borderStyle',
     'paddingTop',
     'paddingRight',
     'paddingBottom',
@@ -100,34 +106,40 @@ function getCaretCoordinates(textarea: HTMLTextAreaElement, position: number) {
     'fontWeight',
     'fontStretch',
     'fontSize',
+    'fontSizeAdjust',
     'lineHeight',
     'fontFamily',
     'textAlign',
     'textTransform',
+    'textIndent',
+    'textDecoration',
     'letterSpacing',
     'wordSpacing',
-  ] as const;
+    'tabSize',
+    'MozTabSize',
+  ];
 
-  properties.forEach((prop) => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    div.style[prop as any] = computed[prop as any];
-  });
-
-  div.style.position = 'absolute';
-  div.style.visibility = 'hidden';
-  div.style.whiteSpace = 'pre-wrap';
-  div.style.wordWrap = 'break-word';
-
-  div.textContent = textarea.value.substring(0, position);
-  const span = document.createElement('span');
-  span.textContent = textarea.value.substring(position) || '.';
-  div.appendChild(span);
-
+  div.id = 'input-textarea-caret-position-mirror-div';
   document.body.appendChild(div);
 
+  const styleObj = div.style;
+  styleObj.whiteSpace = 'pre-wrap';
+  styleObj.wordWrap = 'break-word';
+  styleObj.position = 'absolute';
+  styleObj.visibility = 'hidden';
+
+  for (const prop of properties) {
+    styleObj[prop as any] = style[prop as any];
+  }
+
+  div.textContent = element.value.substring(0, position);
+  const span = document.createElement('span');
+  span.textContent = element.value.substring(position) || '.';
+  div.appendChild(span);
+
   const coordinates = {
-    top: span.offsetTop + parseInt(computed.borderTopWidth, 10),
-    left: span.offsetLeft + parseInt(computed.borderLeftWidth, 10),
+    top: span.offsetTop + parseInt(style.borderTopWidth, 10),
+    left: span.offsetLeft + parseInt(style.borderLeftWidth, 10),
   };
 
   document.body.removeChild(div);
@@ -136,11 +148,13 @@ function getCaretCoordinates(textarea: HTMLTextAreaElement, position: number) {
 
 export function NoteEditor({
   initialTopic,
-  isEditing = false,
+  isEditing: isEditingProp,
   onSave,
   onCancel,
   onDelete,
 }: NoteEditorProps) {
+  const isEditing = isEditingProp ?? !!initialTopic;
+
   const [title, setTitle] = useState(initialTopic?.title || '');
   const [studiedOn, setStudiedOn] = useState(initialTopic?.studiedOn || '');
   const [notes, setNotes] = useState(initialTopic?.notes || '');
@@ -180,6 +194,7 @@ export function NoteEditor({
   const editorContainerRef = useRef<HTMLDivElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
   const pdfInputRef = useRef<HTMLInputElement>(null);
+  const savedCursorRef = useRef<number | null>(null);
 
   useEffect(() => {
     if (!studiedOn && !initialTopic?.studiedOn) {
@@ -199,15 +214,17 @@ export function NoteEditor({
     return () => window.removeEventListener('resize', handleResize);
   }, [editorMode]);
 
-  const insertTextAtCursor = (textToInsert: string) => {
+  const insertTextAtCursor = useCallback((textToInsert: string) => {
     const textarea = textareaRef.current;
     if (!textarea) {
       setNotes((prev) => prev + '\n' + textToInsert);
       return;
     }
 
-    const start = textarea.selectionStart;
-    const end = textarea.selectionEnd;
+    const start = savedCursorRef.current !== null ? savedCursorRef.current : textarea.selectionStart;
+    const end = savedCursorRef.current !== null ? savedCursorRef.current : textarea.selectionEnd;
+    savedCursorRef.current = null;
+
     const newNotes = notes.substring(0, start) + textToInsert + notes.substring(end);
     setNotes(newNotes);
 
@@ -215,28 +232,92 @@ export function NoteEditor({
       textarea.focus();
       textarea.setSelectionRange(start + textToInsert.length, start + textToInsert.length);
     }, 10);
-  };
+  }, [notes]);
 
-  const insertMarkdownWrapper = (before: string, after: string = '') => {
+  const insertMarkdownWrapper = useCallback((before: string, after: string = '') => {
     const textarea = textareaRef.current;
     if (!textarea) return;
 
-    const start = textarea.selectionStart;
-    const end = textarea.selectionEnd;
-    const selectedText = notes.substring(start, end);
-    const replacement = `${before}${selectedText || 'text'}${after}`;
+    const targetStart = savedCursorRef.current !== null ? savedCursorRef.current : textarea.selectionStart;
+    const targetEnd = savedCursorRef.current !== null ? savedCursorRef.current : textarea.selectionEnd;
+    savedCursorRef.current = null;
 
-    const newNotes = notes.substring(0, start) + replacement + notes.substring(end);
+    let prefix = before;
+    if (before.startsWith('- ') || before.startsWith('1. ') || before.startsWith('# ') || before.startsWith('> ')) {
+      const textBefore = notes.substring(0, targetStart);
+      if (textBefore.length > 0 && !textBefore.endsWith('\n')) {
+        prefix = '\n' + before;
+      }
+    }
+
+    const selectedText = notes.substring(targetStart, targetEnd);
+    const replacement = `${prefix}${selectedText || ''}${after}`;
+
+    const newNotes = notes.substring(0, targetStart) + replacement + notes.substring(targetEnd);
     setNotes(newNotes);
 
     setTimeout(() => {
       textarea.focus();
-      textarea.setSelectionRange(
-        start + before.length,
-        start + before.length + (selectedText.length || 4)
-      );
+      const newCursor = targetStart + prefix.length + (selectedText.length || 0);
+      textarea.setSelectionRange(newCursor, newCursor);
     }, 10);
-  };
+  }, [notes]);
+
+  // Handle inserting an existing uploaded file or link
+  const handleInsertExistingFile = useCallback((file: TopicFile) => {
+    if (file.type.startsWith('image/')) {
+      insertTextAtCursor(`\n\n![${file.name}](/api/files/${file.fileId})\n\n`);
+    } else {
+      insertTextAtCursor(`\n\n[📄 ${file.name}](/api/files/${file.fileId})\n\n`);
+    }
+  }, [insertTextAtCursor]);
+
+  const handleInsertExistingLink = useCallback((link: TopicLink) => {
+    insertTextAtCursor(` [${link.label}](${link.url}) `);
+  }, [insertTextAtCursor]);
+
+  // Compute available slash/mention commands based on current query and attachments
+  const commandOptions = useMemo(() => {
+    return getAvailableSlashCommands({
+      trigger: menuTrigger,
+      searchQuery: menuSearch,
+      files,
+      links,
+      onUploadImageClick: () => imageInputRef.current?.click(),
+      onUploadPdfClick: () => pdfInputRef.current?.click(),
+      onInsertLinkClick: () => {
+        setDialogUrl('');
+        setDialogLabel('');
+        setLinkDialogOpen(true);
+      },
+      onInsertFile: (file) => handleInsertExistingFile(file),
+      onInsertLink: (link) => handleInsertExistingLink(link),
+      onInsertMarkdown: (prefix, suffix) => insertMarkdownWrapper(prefix, suffix),
+    });
+  }, [menuTrigger, menuSearch, files, links, handleInsertExistingFile, handleInsertExistingLink, insertMarkdownWrapper]);
+
+  // Erase the typed trigger (/query or @query) and execute command
+  const executeWithTriggerReplaced = useCallback((action: () => void) => {
+    const textarea = textareaRef.current;
+    if (!textarea || triggerStartIndex === null) {
+      action();
+      setMenuOpen(false);
+      return;
+    }
+
+    const cursorPos = textarea.selectionStart;
+    const beforeTrigger = notes.substring(0, triggerStartIndex);
+    const afterCursor = notes.substring(cursorPos);
+    setNotes(beforeTrigger + afterCursor);
+    savedCursorRef.current = triggerStartIndex;
+
+    setTimeout(() => {
+      textarea.focus();
+      textarea.setSelectionRange(triggerStartIndex, triggerStartIndex);
+      action();
+      setMenuOpen(false);
+    }, 10);
+  }, [notes, triggerStartIndex]);
 
   // Detect when user types / or @
   const handleTextareaChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -276,45 +357,103 @@ export function NoteEditor({
     }
   };
 
-  // Erase the typed trigger (/query or @query) and execute command
-  const executeWithTriggerReplaced = (action: () => void) => {
-    const textarea = textareaRef.current;
-    if (!textarea || triggerStartIndex === null) {
-      action();
-      setMenuOpen(false);
-      return;
-    }
-
-    const cursorPos = textarea.selectionStart;
-    const beforeTrigger = notes.substring(0, triggerStartIndex);
-    const afterCursor = notes.substring(cursorPos);
-    setNotes(beforeTrigger + afterCursor);
-
-    setTimeout(() => {
-      textarea.focus();
-      textarea.setSelectionRange(triggerStartIndex, triggerStartIndex);
-      action();
-      setMenuOpen(false);
-    }, 10);
-  };
-
-  // Keyboard navigation for / and @ dropdown
+  // Keyboard navigation for / and @ dropdown, and automatic list / task-list continuation on Enter
   const handleTextareaKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (menuOpen) {
       if (e.key === 'ArrowDown') {
         e.preventDefault();
-        setMenuSelectedIndex((prev) => prev + 1);
+        if (commandOptions.length > 0) {
+          setMenuSelectedIndex((prev) => (prev + 1) % commandOptions.length);
+        }
         return;
       }
       if (e.key === 'ArrowUp') {
         e.preventDefault();
-        setMenuSelectedIndex((prev) => Math.max(0, prev - 1));
+        if (commandOptions.length > 0) {
+          setMenuSelectedIndex((prev) => (prev - 1 + commandOptions.length) % commandOptions.length);
+        }
+        return;
+      }
+      if (e.key === 'Enter' || e.key === 'Tab') {
+        e.preventDefault();
+        if (commandOptions.length > 0) {
+          const selected = commandOptions[menuSelectedIndex] || commandOptions[0];
+          if (selected) {
+            executeWithTriggerReplaced(selected.action);
+          }
+        } else {
+          setMenuOpen(false);
+        }
         return;
       }
       if (e.key === 'Escape') {
         e.preventDefault();
         setMenuOpen(false);
         return;
+      }
+    }
+
+    // When dropdown is not open, handle smart Enter for lists and checkboxes
+    if (!menuOpen && e.key === 'Enter' && !e.shiftKey) {
+      const textarea = textareaRef.current;
+      if (textarea) {
+        const cursorPos = textarea.selectionStart;
+        const textBefore = notes.substring(0, cursorPos);
+        const lastLine = textBefore.split('\n').pop() || '';
+
+        // Empty task item: "- [ ] " or "- [x] " -> exit task list
+        if (/^[-*]\s*\[[ xX]\]\s*$/.test(lastLine)) {
+          e.preventDefault();
+          const lineStart = cursorPos - lastLine.length;
+          const newNotes = notes.substring(0, lineStart) + notes.substring(cursorPos);
+          setNotes(newNotes);
+          setTimeout(() => {
+            textarea.focus();
+            textarea.setSelectionRange(lineStart, lineStart);
+          }, 10);
+          return;
+        }
+
+        // Active task item: continue to next task "- [ ] "
+        if (/^[-*]\s*\[[ xX]\]\s+.+/.test(lastLine)) {
+          e.preventDefault();
+          const insert = '\n- [ ] ';
+          const afterCursor = notes.substring(cursorPos);
+          const newNotes = textBefore + insert + afterCursor;
+          setNotes(newNotes);
+          setTimeout(() => {
+            textarea.focus();
+            textarea.setSelectionRange(cursorPos + insert.length, cursorPos + insert.length);
+          }, 10);
+          return;
+        }
+
+        // Empty bullet item: "- " -> exit bullet list
+        if (/^[-*]\s*$/.test(lastLine)) {
+          e.preventDefault();
+          const lineStart = cursorPos - lastLine.length;
+          const newNotes = notes.substring(0, lineStart) + notes.substring(cursorPos);
+          setNotes(newNotes);
+          setTimeout(() => {
+            textarea.focus();
+            textarea.setSelectionRange(lineStart, lineStart);
+          }, 10);
+          return;
+        }
+
+        // Active bullet item: continue to next bullet "- "
+        if (/^[-*]\s+.+/.test(lastLine)) {
+          e.preventDefault();
+          const insert = '\n- ';
+          const afterCursor = notes.substring(cursorPos);
+          const newNotes = textBefore + insert + afterCursor;
+          setNotes(newNotes);
+          setTimeout(() => {
+            textarea.focus();
+            textarea.setSelectionRange(cursorPos + insert.length, cursorPos + insert.length);
+          }, 10);
+          return;
+        }
       }
     }
   };
@@ -344,15 +483,30 @@ export function NoteEditor({
     }
   };
 
-  const handleInsertExistingLink = (link: TopicLink) => {
-    insertTextAtCursor(` [${link.label}](${link.url}) `);
-  };
+  const handleInsertDialogLink = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (!dialogUrl.trim()) return;
 
-  const handleInsertExistingFile = (file: TopicFile) => {
-    if (file.type.startsWith('image/')) {
-      insertTextAtCursor(`\n\n![${file.name}](/api/files/${file.fileId})\n\n`);
-    } else {
-      insertTextAtCursor(`\n\n[📄 ${file.name}](/api/files/${file.fileId})\n\n`);
+    let url = dialogUrl.trim();
+    if (!url.startsWith('http://') && !url.startsWith('https://')) {
+      url = 'https://' + url;
+    }
+
+    try {
+      const parsed = new URL(url);
+      if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+        setError('URL must begin with http:// or https://');
+        return;
+      }
+      let label = dialogLabel.trim() || parsed.hostname;
+      insertTextAtCursor(` [${label}](${url}) `);
+      setLinks((prev) => [...prev, { url, label }]);
+      setDialogUrl('');
+      setDialogLabel('');
+      setLinkDialogOpen(false);
+      setError(null);
+    } catch {
+      setError(`"${dialogUrl}" is not a valid web URL. Please enter a valid link address.`);
     }
   };
 
@@ -419,11 +573,21 @@ export function NoteEditor({
     setSaving(true);
 
     try {
+      // Filter out any broken or malformed URLs before sending to the server
+      const validLinks = links.filter((l) => {
+        try {
+          const u = new URL(l.url);
+          return (u.protocol === 'http:' || u.protocol === 'https:') && !l.url.includes(' ');
+        } catch {
+          return false;
+        }
+      });
+
       await onSave({
         title: title.trim(),
         studiedOn,
         notes: notes.trim() ? notes : undefined,
-        links,
+        links: validLinks,
         files,
         ring: ringActive
           ? {
@@ -445,20 +609,24 @@ export function NoteEditor({
     }
   }, [title, studiedOn, notes, links, files, ringActive, ringFrequency, ringColor, initialTopic, onSave]);
 
-  // Keyboard shortcut Cmd+S / Ctrl+S to save
+  // Global keyboard shortcuts: Cmd+S / Ctrl+S or Cmd+Enter / Ctrl+Enter to save anywhere
   useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === 's') {
+    const handleGlobalKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 's') {
+        e.preventDefault();
+        handleSave();
+      }
+      if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
         e.preventDefault();
         handleSave();
       }
     };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    window.addEventListener('keydown', handleGlobalKeyDown);
+    return () => window.removeEventListener('keydown', handleGlobalKeyDown);
   }, [handleSave]);
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#090a10] text-[#f8fafc]">
+    <div className="min-h-screen flex flex-col bg-slate-50 dark:bg-[#090a10] text-slate-900 dark:text-[#f8fafc] transition-colors">
       {/* Hidden file inputs */}
       <input
         ref={imageInputRef}
@@ -478,42 +646,45 @@ export function NoteEditor({
       />
 
       {/* Top sticky editor bar */}
-      <header className="sticky top-0 z-30 border-b border-white/10 bg-[#090a10]/90 backdrop-blur-xl px-4 py-3">
+      <header className="sticky top-0 z-30 border-b border-slate-200/80 dark:border-white/10 bg-white/80 dark:bg-[#090a10]/90 backdrop-blur-xl px-4 py-3 transition-colors">
         <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             <Button
               variant="ghost"
               size="sm"
               onClick={onCancel}
-              className="gap-1.5 text-xs text-zinc-400 hover:text-white hover:bg-white/5"
+              className="gap-1.5 text-xs text-slate-600 hover:text-slate-900 hover:bg-slate-100 dark:text-zinc-400 dark:hover:text-white dark:hover:bg-white/5"
             >
               <ArrowLeft className="w-4 h-4" />
               <span>Back</span>
             </Button>
 
-            <span className="text-zinc-600">/</span>
+            <span className="text-slate-300 dark:text-zinc-600">/</span>
 
-            <span className="text-xs font-medium text-zinc-400">
-              {isEditing ? 'Editing Task' : 'Create New Task'}
+            <span className="text-xs font-medium text-slate-600 dark:text-zinc-400">
+              {isEditing ? 'Editing Task' : 'Create New Topic'}
             </span>
 
             {savedNotice && (
-              <Badge className="bg-emerald-500/20 text-emerald-300 border-emerald-500/30 text-[10px] gap-1 py-0">
+              <Badge className="bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border-emerald-500/30 text-[10px] gap-1 py-0">
                 <Check className="w-3 h-3" /> Saved
               </Badge>
             )}
           </div>
 
           <div className="flex items-center gap-2">
-            {/* View Mode switcher - Responsive for mobile (Write / Preview) and desktop (Write / Split / Preview) */}
-            <div className="flex items-center bg-zinc-900/80 border border-white/10 rounded-lg p-0.5 text-xs">
+            {/* Theme Toggle */}
+            <ThemeToggle />
+
+            {/* View Mode switcher */}
+            <div className="flex items-center bg-slate-100 dark:bg-zinc-900/80 border border-slate-200 dark:border-white/10 rounded-lg p-0.5 text-xs">
               <button
                 type="button"
                 onClick={() => setEditorMode('write')}
                 className={`px-2 sm:px-2.5 py-1 rounded-md transition-all ${
                   editorMode === 'write'
                     ? 'bg-indigo-600 text-white font-medium shadow-xs'
-                    : 'text-zinc-400 hover:text-zinc-200'
+                    : 'text-slate-600 hover:text-slate-900 dark:text-zinc-400 dark:hover:text-zinc-200'
                 }`}
               >
                 <span className="flex items-center gap-1 sm:gap-1.5">
@@ -527,7 +698,7 @@ export function NoteEditor({
                 className={`hidden md:inline-flex px-2.5 py-1 rounded-md transition-all ${
                   editorMode === 'split'
                     ? 'bg-indigo-600 text-white font-medium shadow-xs'
-                    : 'text-zinc-400 hover:text-zinc-200'
+                    : 'text-slate-600 hover:text-slate-900 dark:text-zinc-400 dark:hover:text-zinc-200'
                 }`}
               >
                 <span className="flex items-center gap-1.5">
@@ -540,7 +711,7 @@ export function NoteEditor({
                 className={`px-2 sm:px-2.5 py-1 rounded-md transition-all ${
                   editorMode === 'preview'
                     ? 'bg-indigo-600 text-white font-medium shadow-xs'
-                    : 'text-zinc-400 hover:text-zinc-200'
+                    : 'text-slate-600 hover:text-slate-900 dark:text-zinc-400 dark:hover:text-zinc-200'
                 }`}
               >
                 <span className="flex items-center gap-1 sm:gap-1.5">
@@ -555,7 +726,7 @@ export function NoteEditor({
                 variant="ghost"
                 size="sm"
                 onClick={onDelete}
-                className="h-8 px-2.5 text-zinc-400 hover:text-red-400 hover:bg-red-500/10 text-xs"
+                className="h-8 px-2.5 text-slate-500 hover:text-red-500 hover:bg-red-50 dark:text-zinc-400 dark:hover:text-red-400 dark:hover:bg-red-500/10 text-xs"
               >
                 <Trash2 className="w-4 h-4" />
               </Button>
@@ -566,9 +737,10 @@ export function NoteEditor({
               onClick={handleSave}
               disabled={saving || uploading || !title.trim()}
               className="h-8 px-4 bg-gradient-to-r from-indigo-600 to-indigo-500 hover:from-indigo-500 hover:to-indigo-400 text-white font-medium shadow-md shadow-indigo-600/30 gap-1.5 text-xs"
+              title="Save changes (Enter in title, or Ctrl+Enter anywhere)"
             >
               <Save className="w-3.5 h-3.5" />
-              {saving ? 'Saving...' : 'Save Task'}
+              {saving ? 'Saving...' : isEditing ? 'Save Changes' : 'Create Topic'}
             </Button>
           </div>
         </div>
@@ -576,7 +748,7 @@ export function NoteEditor({
 
       {error && (
         <div className="max-w-7xl mx-auto w-full px-4 pt-4">
-          <div className="p-3 text-xs bg-red-500/10 border border-red-500/30 text-red-400 rounded-lg">
+          <div className="p-3 text-xs bg-red-500/10 border border-red-500/30 text-red-500 dark:text-red-400 rounded-lg">
             {error}
           </div>
         </div>
@@ -585,41 +757,49 @@ export function NoteEditor({
       {/* Main Container */}
       <div className="flex-1 max-w-7xl w-full mx-auto p-4 md:p-6 flex flex-col gap-6">
         {/* Title & Date Bar */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/10 pb-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200/80 dark:border-white/10 pb-4">
           <input
             type="text"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            placeholder="Task title (e.g. Gym Workout, Distributed Systems, 5km Run, React Performance...)"
-            className="text-2xl sm:text-3xl font-bold bg-transparent border-none text-white placeholder:text-zinc-600 focus:outline-none focus:ring-0 w-full"
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                if (title.trim() && !saving) {
+                  handleSave();
+                }
+              }
+            }}
+            placeholder="Topic title (e.g. Distributed Consensus in Raft, Gym Workout, React Hooks...)"
+            className="text-2xl sm:text-3xl font-bold bg-transparent border-none text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-zinc-600 focus:outline-none focus:ring-0 w-full"
             autoFocus
           />
 
           <div className="flex flex-wrap items-center gap-3 shrink-0">
             <div className="flex items-center gap-2">
-              <span className="text-xs text-zinc-400 flex items-center gap-1.5">
-                <Calendar className="w-3.5 h-3.5 text-indigo-400" />
+              <span className="text-xs text-slate-500 dark:text-zinc-400 flex items-center gap-1.5">
+                <Calendar className="w-3.5 h-3.5 text-indigo-500 dark:text-indigo-400" />
                 Date:
               </span>
               <input
                 type="date"
                 value={studiedOn}
                 onChange={(e) => setStudiedOn(e.target.value)}
-                className="bg-zinc-900 border border-white/10 text-xs text-zinc-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-indigo-500"
+                className="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-white/10 text-xs text-slate-800 dark:text-zinc-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-indigo-500"
               />
             </div>
 
             {/* Habit Ring Cadence & Color Toggle */}
-            <div className="flex flex-wrap items-center gap-2 bg-zinc-900 border border-white/10 rounded-lg px-2.5 py-1.5 text-xs">
+            <div className="flex flex-wrap items-center gap-2 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-white/10 rounded-lg px-2.5 py-1.5 text-xs">
               <button
                 type="button"
                 onClick={() => setRingActive(!ringActive)}
                 className={`flex items-center gap-1.5 font-medium transition-colors ${
-                  ringActive ? 'text-amber-400' : 'text-zinc-500 hover:text-zinc-300'
+                  ringActive ? 'text-amber-500 dark:text-amber-400' : 'text-slate-500 hover:text-slate-700 dark:text-zinc-500 dark:hover:text-zinc-300'
                 }`}
                 title="Toggle Habit Ring (Track weekly or monthly goal)"
               >
-                <Flame className={`w-3.5 h-3.5 ${ringActive ? 'text-amber-400' : 'text-zinc-500'}`} />
+                <Flame className={`w-3.5 h-3.5 ${ringActive ? 'text-amber-500 dark:text-amber-400' : 'text-slate-400 dark:text-zinc-500'}`} />
                 <span>Habit Ring</span>
               </button>
 
@@ -628,23 +808,18 @@ export function NoteEditor({
                   <select
                     value={ringFrequency}
                     onChange={(e) => setRingFrequency(e.target.value as RingFrequency)}
-                    className="bg-zinc-950 text-amber-300 border border-white/10 rounded px-1.5 py-0.5 text-[11px] focus:outline-none cursor-pointer"
+                    className="bg-slate-50 dark:bg-zinc-950 text-amber-600 dark:text-amber-300 border border-slate-200 dark:border-white/10 rounded px-1.5 py-0.5 text-[11px] focus:outline-none cursor-pointer"
                   >
                     <option value="4x-week">At least 4 days / week (e.g. Gym)</option>
                     <option value="daily">Daily (7 days / week)</option>
                     <option value="3x-week">At least 3 days / week</option>
                     <option value="2x-week">At least 2 days / week</option>
                     <option value="1x-week">At least 1 day / week</option>
-                    <option value="5x-week">At least 5 days / week</option>
-                    <option value="6x-week">At least 6 days / week</option>
-                    <option value="every-2-days">Every 2 days</option>
-                    <option value="10x-month">At least 10 days / month</option>
-                    <option value="15x-month">At least 15 days / month</option>
-                    <option value="20x-month">At least 20 days / month</option>
+                    <option value="biweekly">Every 2 weeks</option>
+                    <option value="monthly">Monthly</option>
                   </select>
 
-                  {/* Ring Color Swatches */}
-                  <div className="flex items-center gap-1 pl-1 border-l border-white/10">
+                  <div className="flex items-center gap-1 pl-1 border-l border-slate-200 dark:border-white/10">
                     {(Object.keys(RING_COLORS) as RingColor[]).map((cKey) => {
                       const cDef = RING_COLORS[cKey];
                       const isSel = ringColor === cKey;
@@ -654,7 +829,7 @@ export function NoteEditor({
                           type="button"
                           onClick={() => setRingColor(cKey)}
                           className={`w-4 h-4 rounded-full transition-all ${
-                            isSel ? 'ring-2 ring-white scale-125' : 'opacity-60 hover:opacity-100'
+                            isSel ? 'ring-2 ring-indigo-500 dark:ring-white scale-125' : 'opacity-60 hover:opacity-100'
                           }`}
                           style={{ backgroundColor: cDef.hex }}
                           title={cDef.name}
@@ -669,13 +844,13 @@ export function NoteEditor({
         </div>
 
         {/* Markdown Toolbar - Smooth horizontal touch scroll on mobile */}
-        <div className="flex items-center gap-1 p-1.5 bg-zinc-900/60 border border-white/10 rounded-xl text-zinc-300 overflow-x-auto touch-pan-x scrollbar-none">
+        <div className="flex items-center gap-1 p-1.5 bg-white/80 dark:bg-zinc-900/60 border border-slate-200/80 dark:border-white/10 rounded-xl text-slate-700 dark:text-zinc-300 overflow-x-auto touch-pan-x scrollbar-none transition-colors">
           <Button
             type="button"
             variant="ghost"
             size="sm"
             onClick={() => insertMarkdownWrapper('**', '**')}
-            className="h-7 w-7 p-0 hover:bg-white/10"
+            className="h-7 w-7 p-0 hover:bg-slate-100 dark:hover:bg-white/10"
             title="Bold (**text**)"
           >
             <Bold className="w-3.5 h-3.5" />
@@ -685,20 +860,20 @@ export function NoteEditor({
             variant="ghost"
             size="sm"
             onClick={() => insertMarkdownWrapper('*', '*')}
-            className="h-7 w-7 p-0 hover:bg-white/10"
+            className="h-7 w-7 p-0 hover:bg-slate-100 dark:hover:bg-white/10"
             title="Italic (*text*)"
           >
             <Italic className="w-3.5 h-3.5" />
           </Button>
 
-          <div className="w-[1px] h-4 bg-white/10 mx-1" />
+          <div className="w-[1px] h-4 bg-slate-200 dark:bg-white/10 mx-1" />
 
           <Button
             type="button"
             variant="ghost"
             size="sm"
             onClick={() => insertMarkdownWrapper('# ')}
-            className="h-7 w-7 p-0 hover:bg-white/10"
+            className="h-7 w-7 p-0 hover:bg-slate-100 dark:hover:bg-white/10"
             title="Heading 1"
           >
             <Heading1 className="w-3.5 h-3.5" />
@@ -708,7 +883,7 @@ export function NoteEditor({
             variant="ghost"
             size="sm"
             onClick={() => insertMarkdownWrapper('## ')}
-            className="h-7 w-7 p-0 hover:bg-white/10"
+            className="h-7 w-7 p-0 hover:bg-slate-100 dark:hover:bg-white/10"
             title="Heading 2"
           >
             <Heading2 className="w-3.5 h-3.5" />
@@ -718,20 +893,20 @@ export function NoteEditor({
             variant="ghost"
             size="sm"
             onClick={() => insertMarkdownWrapper('### ')}
-            className="h-7 w-7 p-0 hover:bg-white/10"
+            className="h-7 w-7 p-0 hover:bg-slate-100 dark:hover:bg-white/10"
             title="Heading 3"
           >
             <Heading3 className="w-3.5 h-3.5" />
           </Button>
 
-          <div className="w-[1px] h-4 bg-white/10 mx-1" />
+          <div className="w-[1px] h-4 bg-slate-200 dark:bg-white/10 mx-1" />
 
           <Button
             type="button"
             variant="ghost"
             size="sm"
             onClick={() => insertMarkdownWrapper('- ')}
-            className="h-7 w-7 p-0 hover:bg-white/10"
+            className="h-7 w-7 p-0 hover:bg-slate-100 dark:hover:bg-white/10"
             title="Bullet List"
           >
             <List className="w-3.5 h-3.5" />
@@ -741,7 +916,7 @@ export function NoteEditor({
             variant="ghost"
             size="sm"
             onClick={() => insertMarkdownWrapper('1. ')}
-            className="h-7 w-7 p-0 hover:bg-white/10"
+            className="h-7 w-7 p-0 hover:bg-slate-100 dark:hover:bg-white/10"
             title="Numbered List"
           >
             <ListOrdered className="w-3.5 h-3.5" />
@@ -751,20 +926,20 @@ export function NoteEditor({
             variant="ghost"
             size="sm"
             onClick={() => insertMarkdownWrapper('- [ ] ')}
-            className="h-7 w-7 p-0 hover:bg-white/10"
+            className="h-7 w-7 p-0 hover:bg-slate-100 dark:hover:bg-white/10"
             title="Task List"
           >
             <CheckSquare className="w-3.5 h-3.5" />
           </Button>
 
-          <div className="w-[1px] h-4 bg-white/10 mx-1" />
+          <div className="w-[1px] h-4 bg-slate-200 dark:bg-white/10 mx-1" />
 
           <Button
             type="button"
             variant="ghost"
             size="sm"
             onClick={() => insertMarkdownWrapper('```\n', '\n```')}
-            className="h-7 w-7 p-0 hover:bg-white/10"
+            className="h-7 w-7 p-0 hover:bg-slate-100 dark:hover:bg-white/10"
             title="Code Block"
           >
             <Code className="w-3.5 h-3.5" />
@@ -774,7 +949,7 @@ export function NoteEditor({
             variant="ghost"
             size="sm"
             onClick={() => insertMarkdownWrapper('> ')}
-            className="h-7 w-7 p-0 hover:bg-white/10"
+            className="h-7 w-7 p-0 hover:bg-slate-100 dark:hover:bg-white/10"
             title="Quote"
           >
             <Quote className="w-3.5 h-3.5" />
@@ -784,13 +959,13 @@ export function NoteEditor({
             variant="ghost"
             size="sm"
             onClick={() => insertMarkdownWrapper('\n---\n')}
-            className="h-7 w-7 p-0 hover:bg-white/10"
+            className="h-7 w-7 p-0 hover:bg-slate-100 dark:hover:bg-white/10"
             title="Horizontal Divider"
           >
             <Minus className="w-3.5 h-3.5" />
           </Button>
 
-          <div className="w-[1px] h-4 bg-white/10 mx-1" />
+          <div className="w-[1px] h-4 bg-slate-200 dark:bg-white/10 mx-1" />
 
           {/* Inline Link Inserter */}
           <Button
@@ -802,7 +977,7 @@ export function NoteEditor({
               setDialogLabel('');
               setLinkDialogOpen(true);
             }}
-            className="h-7 px-2 text-xs hover:bg-white/10 gap-1 text-indigo-300"
+            className="h-7 px-2 text-xs hover:bg-slate-100 dark:hover:bg-white/10 gap-1 text-indigo-600 dark:text-indigo-300"
             title="Insert Link [title](url)"
           >
             <LinkIcon className="w-3.5 h-3.5" />
@@ -816,7 +991,7 @@ export function NoteEditor({
             size="sm"
             onClick={() => imageInputRef.current?.click()}
             disabled={uploading}
-            className="h-7 px-2 text-xs hover:bg-white/10 gap-1 text-indigo-300"
+            className="h-7 px-2 text-xs hover:bg-slate-100 dark:hover:bg-white/10 gap-1 text-indigo-600 dark:text-indigo-300"
             title="Upload and embed image inline"
           >
             <ImageIcon className="w-3.5 h-3.5" />
@@ -830,17 +1005,17 @@ export function NoteEditor({
             size="sm"
             onClick={() => pdfInputRef.current?.click()}
             disabled={uploading}
-            className="h-7 px-2 text-xs hover:bg-white/10 gap-1 text-amber-300"
+            className="h-7 px-2 text-xs hover:bg-slate-100 dark:hover:bg-white/10 gap-1 text-amber-600 dark:text-amber-300"
             title="Upload and link PDF inline"
           >
             <FileText className="w-3.5 h-3.5" />
             <span className="hidden sm:inline text-[11px]">PDF</span>
           </Button>
 
-          <div className="ml-auto hidden sm:flex items-center gap-1.5 text-[11px] text-zinc-500 pr-2">
-            <span className="px-1.5 py-0.5 rounded bg-white/5 font-mono text-indigo-400">/</span> or{' '}
-            <span className="px-1.5 py-0.5 rounded bg-white/5 font-mono text-indigo-400">@</span>
-            <span>in editor for quick link menu</span>
+          <div className="ml-auto hidden sm:flex items-center gap-1.5 text-[11px] text-slate-500 dark:text-zinc-500 pr-2">
+            <span className="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-white/5 font-mono text-indigo-600 dark:text-indigo-400 font-semibold">/</span> or{' '}
+            <span className="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-white/5 font-mono text-indigo-600 dark:text-indigo-400 font-semibold">@</span>
+            <span>for command menu</span>
           </div>
         </div>
 
@@ -850,14 +1025,14 @@ export function NoteEditor({
           {(editorMode === 'write' || editorMode === 'split') && (
             <div
               ref={editorContainerRef}
-              className={`relative flex flex-col rounded-xl border border-white/10 bg-zinc-950/60 backdrop-blur-md overflow-hidden ${
+              className={`relative flex flex-col rounded-xl border border-slate-200/80 dark:border-white/10 bg-white dark:bg-zinc-950/60 backdrop-blur-md overflow-hidden transition-colors ${
                 editorMode === 'write' ? 'lg:col-span-2' : ''
               }`}
             >
-              <div className="flex items-center justify-between px-3 py-2 border-b border-white/5 bg-white/[0.02] text-[11px] text-zinc-400">
+              <div className="flex items-center justify-between px-3 py-2 border-b border-slate-200/80 dark:border-white/5 bg-slate-50/50 dark:bg-white/[0.02] text-[11px] text-slate-500 dark:text-zinc-400">
                 <span className="flex items-center gap-1.5">
-                  <AtSign className="w-3.5 h-3.5 text-indigo-400" />
-                  <span>Type / or @ to link images, PDFs, links &amp; blocks</span>
+                  <AtSign className="w-3.5 h-3.5 text-indigo-500 dark:text-indigo-400" />
+                  <span>Type / or @ to link images, PDFs, links &amp; format blocks</span>
                 </span>
                 <span>{notes.length.toLocaleString()} / 50,000 chars</span>
               </div>
@@ -868,7 +1043,7 @@ export function NoteEditor({
                 onChange={handleTextareaChange}
                 onKeyDown={handleTextareaKeyDown}
                 placeholder="# Concept Overview&#10;&#10;Type / to insert headings, code blocks, or upload images & PDFs!&#10;Type @ to quickly link any file or reference URL inline.&#10;&#10;Try typing / or @ right here!"
-                className="flex-1 w-full p-4 bg-transparent resize-none border-none text-sm text-zinc-100 font-mono leading-relaxed placeholder:text-zinc-600 focus:outline-none focus:ring-0 min-h-[420px]"
+                className="flex-1 w-full p-4 bg-transparent resize-none border-none text-sm text-slate-900 dark:text-zinc-100 font-mono leading-relaxed placeholder:text-slate-400 dark:placeholder:text-zinc-600 focus:outline-none focus:ring-0 min-h-[420px]"
                 maxLength={50000}
               />
 
@@ -881,6 +1056,8 @@ export function NoteEditor({
                 selectedIndex={menuSelectedIndex}
                 files={files}
                 links={links}
+                options={commandOptions}
+                onHoverOption={(idx) => setMenuSelectedIndex(idx)}
                 onSelectOption={(option: CommandOption) => {
                   executeWithTriggerReplaced(option.action);
                 }}
@@ -914,19 +1091,19 @@ export function NoteEditor({
           {/* Preview pane */}
           {(editorMode === 'preview' || editorMode === 'split') && (
             <div
-              className={`flex flex-col rounded-xl border border-white/10 bg-zinc-950/80 backdrop-blur-md overflow-hidden ${
+              className={`flex flex-col rounded-xl border border-slate-200/80 dark:border-white/10 bg-white dark:bg-zinc-950/80 backdrop-blur-md overflow-hidden transition-colors ${
                 editorMode === 'preview' ? 'lg:col-span-2' : ''
               }`}
             >
-              <div className="flex items-center justify-between px-3 py-2 border-b border-white/5 bg-white/[0.02] text-[11px] text-zinc-400">
+              <div className="flex items-center justify-between px-3 py-2 border-b border-slate-200/80 dark:border-white/5 bg-slate-50/50 dark:bg-white/[0.02] text-[11px] text-slate-500 dark:text-zinc-400">
                 <span>Formatted Preview (Live)</span>
-                <span className="text-indigo-400 font-mono text-[10px]">Inline Images &amp; PDFs Render Live</span>
+                <span className="text-indigo-600 dark:text-indigo-400 font-mono text-[10px]">Inline Images &amp; PDFs Render Live</span>
               </div>
-              <div className="flex-1 p-6 overflow-y-auto max-h-[600px] text-zinc-200">
+              <div className="flex-1 p-6 overflow-y-auto max-h-[600px] text-slate-800 dark:text-zinc-200">
                 {notes.trim() ? (
                   <MarkdownRenderer content={notes} />
                 ) : (
-                  <div className="h-full flex items-center justify-center text-zinc-600 text-xs italic py-16">
+                  <div className="h-full flex items-center justify-center text-slate-400 dark:text-zinc-600 text-xs italic py-16">
                     Formatted notes with inline diagrams and links will preview here in real time...
                   </div>
                 )}
@@ -938,10 +1115,10 @@ export function NoteEditor({
         {/* References & Attachments Management Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
           {/* Links & References */}
-          <div className="rounded-xl border border-white/10 bg-zinc-950/60 p-4 space-y-3">
+          <div className="rounded-xl border border-slate-200/80 dark:border-white/10 bg-white dark:bg-zinc-950/60 p-4 space-y-3 transition-colors">
             <div className="flex items-center justify-between">
-              <h4 className="text-xs font-semibold uppercase tracking-wider text-zinc-400 flex items-center gap-1.5">
-                <LinkIcon className="w-3.5 h-3.5 text-indigo-400" />
+              <h4 className="text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-zinc-400 flex items-center gap-1.5">
+                <LinkIcon className="w-3.5 h-3.5 text-indigo-500 dark:text-indigo-400" />
                 References &amp; Links ({links.length})
               </h4>
             </div>
@@ -951,19 +1128,19 @@ export function NoteEditor({
                 {links.map((link, idx) => (
                   <div
                     key={idx}
-                    className="flex items-center justify-between p-2 rounded-lg bg-zinc-900/60 border border-white/5 text-xs group"
+                    className="flex items-center justify-between p-2 rounded-lg bg-slate-50 dark:bg-zinc-900/60 border border-slate-200 dark:border-white/5 text-xs group"
                   >
                     <div className="truncate flex items-center gap-2 max-w-[65%]">
-                      <ExternalLink className="w-3.5 h-3.5 text-zinc-500 shrink-0" />
-                      <span className="font-medium text-zinc-200 truncate">{link.label}:</span>
-                      <span className="text-zinc-500 truncate">{link.url}</span>
+                      <ExternalLink className="w-3.5 h-3.5 text-slate-400 dark:text-zinc-500 shrink-0" />
+                      <span className="font-medium text-slate-800 dark:text-zinc-200 truncate">{link.label}:</span>
+                      <span className="text-slate-500 dark:text-zinc-500 truncate">{link.url}</span>
                     </div>
 
                     <div className="flex items-center gap-1.5 shrink-0">
                       <button
                         type="button"
                         onClick={() => handleInsertExistingLink(link)}
-                        className="px-2 py-0.5 rounded text-[11px] font-medium bg-indigo-600/20 hover:bg-indigo-600/40 text-indigo-300 border border-indigo-500/30 transition-colors flex items-center gap-1"
+                        className="px-2 py-0.5 rounded text-[11px] font-medium bg-indigo-50 dark:bg-indigo-600/20 hover:bg-indigo-100 dark:hover:bg-indigo-600/40 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-500/30 transition-colors flex items-center gap-1"
                         title="Insert link into note text at cursor"
                       >
                         <PlusCircle className="w-3 h-3" />
@@ -973,7 +1150,7 @@ export function NoteEditor({
                       <button
                         type="button"
                         onClick={() => setLinks((prev) => prev.filter((_, i) => i !== idx))}
-                        className="text-zinc-500 hover:text-red-400 transition-colors p-1"
+                        className="text-slate-400 hover:text-red-500 dark:text-zinc-500 dark:hover:text-red-400 transition-colors p-1"
                         title="Remove link"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
@@ -989,13 +1166,25 @@ export function NoteEditor({
                 placeholder="https://..."
                 value={newUrl}
                 onChange={(e) => setNewUrl(e.target.value)}
-                className="text-xs bg-zinc-900 border-white/10"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    handleAddLink(false);
+                  }
+                }}
+                className="text-xs bg-slate-50 dark:bg-zinc-900 border-slate-200 dark:border-white/10 text-slate-900 dark:text-white"
               />
               <Input
                 placeholder="Label"
                 value={newLabel}
                 onChange={(e) => setNewLabel(e.target.value)}
-                className="text-xs sm:max-w-[140px] bg-zinc-900 border-white/10"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    handleAddLink(false);
+                  }
+                }}
+                className="text-xs sm:max-w-[140px] bg-slate-50 dark:bg-zinc-900 border-slate-200 dark:border-white/10 text-slate-900 dark:text-white"
               />
               <Button
                 type="button"
@@ -1003,18 +1192,18 @@ export function NoteEditor({
                 size="sm"
                 onClick={() => handleAddLink(false)}
                 disabled={!newUrl.trim()}
-                className="text-xs border-white/10 bg-white/5 hover:bg-white/10 shrink-0"
+                className="text-xs border-slate-200 dark:border-white/10 bg-slate-100 hover:bg-slate-200 dark:bg-white/5 dark:hover:bg-white/10 text-slate-700 dark:text-zinc-200 shrink-0"
               >
-                Add Link
+                Add Link (↵)
               </Button>
             </div>
           </div>
 
           {/* Files & Attachments */}
-          <div className="rounded-xl border border-white/10 bg-zinc-950/60 p-4 space-y-3">
+          <div className="rounded-xl border border-slate-200/80 dark:border-white/10 bg-white dark:bg-zinc-950/60 p-4 space-y-3 transition-colors">
             <div className="flex items-center justify-between">
-              <h4 className="text-xs font-semibold uppercase tracking-wider text-zinc-400 flex items-center gap-1.5">
-                <Upload className="w-3.5 h-3.5 text-indigo-400" />
+              <h4 className="text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-zinc-400 flex items-center gap-1.5">
+                <Upload className="w-3.5 h-3.5 text-indigo-500 dark:text-indigo-400" />
                 Attachments ({files.length})
               </h4>
               <label className="cursor-pointer">
@@ -1026,7 +1215,7 @@ export function NoteEditor({
                   className="hidden"
                   disabled={uploading || saving}
                 />
-                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border border-white/10 bg-white/5 hover:bg-white/10 text-zinc-200 transition-colors">
+                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border border-slate-200 dark:border-white/10 bg-slate-100 hover:bg-slate-200 dark:bg-white/5 dark:hover:bg-white/10 text-slate-700 dark:text-zinc-200 transition-colors">
                   <Upload className="w-3.5 h-3.5" />
                   {uploading ? 'Uploading...' : 'Upload Files'}
                 </span>
@@ -1038,17 +1227,17 @@ export function NoteEditor({
                 {files.map((file) => (
                   <div
                     key={file.fileId}
-                    className="flex items-center justify-between p-2 rounded-lg bg-zinc-900/60 border border-white/5 text-xs"
+                    className="flex items-center justify-between p-2 rounded-lg bg-slate-50 dark:bg-zinc-900/60 border border-slate-200 dark:border-white/5 text-xs"
                   >
                     <div className="flex items-center gap-2 truncate max-w-[55%]">
                       {file.type.startsWith('image/') ? (
-                        <ImageIcon className="w-4 h-4 text-indigo-400 shrink-0" />
+                        <ImageIcon className="w-4 h-4 text-indigo-500 dark:text-indigo-400 shrink-0" />
                       ) : (
                         <FileText className="w-4 h-4 text-amber-500 shrink-0" />
                       )}
                       <div className="truncate">
-                        <p className="font-medium text-zinc-200 truncate">{file.name}</p>
-                        <p className="text-[10px] text-zinc-500">{formatBytes(file.size)}</p>
+                        <p className="font-medium text-slate-800 dark:text-zinc-200 truncate">{file.name}</p>
+                        <p className="text-[10px] text-slate-500 dark:text-zinc-500">{formatBytes(file.size)}</p>
                       </div>
                     </div>
 
@@ -1056,7 +1245,7 @@ export function NoteEditor({
                       <button
                         type="button"
                         onClick={() => handleInsertExistingFile(file)}
-                        className="px-2 py-0.5 rounded text-[11px] font-medium bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/30 transition-colors flex items-center gap-1"
+                        className="px-2 py-0.5 rounded text-[11px] font-medium bg-amber-50 dark:bg-amber-500/20 hover:bg-amber-100 dark:hover:bg-amber-500/30 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-500/30 transition-colors flex items-center gap-1"
                         title="Insert image or PDF card into notes at cursor"
                       >
                         <PlusCircle className="w-3 h-3" />
@@ -1066,7 +1255,7 @@ export function NoteEditor({
                       <button
                         type="button"
                         onClick={() => handleRemoveFile(file.fileId)}
-                        className="text-zinc-500 hover:text-red-400 transition-colors p-1"
+                        className="text-slate-400 hover:text-red-500 dark:text-zinc-500 dark:hover:text-red-400 transition-colors p-1"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>
@@ -1075,8 +1264,8 @@ export function NoteEditor({
                 ))}
               </div>
             ) : (
-              <p className="text-xs text-zinc-600 italic py-2">
-                Type <span className="font-mono text-indigo-400">/</span> or <span className="font-mono text-indigo-400">@</span> to upload and embed files directly in text.
+              <p className="text-xs text-slate-500 dark:text-zinc-600 italic py-2">
+                Type <span className="font-mono text-indigo-600 dark:text-indigo-400 font-semibold">/</span> or <span className="font-mono text-indigo-600 dark:text-indigo-400 font-semibold">@</span> to upload and embed files directly in text.
               </p>
             )}
           </div>
@@ -1085,61 +1274,69 @@ export function NoteEditor({
 
       {/* Insert Link Dialog */}
       <Dialog open={linkDialogOpen} onOpenChange={setLinkDialogOpen}>
-        <DialogContent className="sm:max-w-[420px] bg-[#0f111a] border border-white/10 text-white rounded-2xl">
+        <DialogContent className="sm:max-w-[420px] bg-white dark:bg-[#0f111a] border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white rounded-2xl shadow-2xl">
           <DialogHeader>
-            <DialogTitle className="text-white">Insert Web Link</DialogTitle>
-            <DialogDescription className="text-zinc-400 text-xs">
-              Enter the URL and optional label to embed at the current cursor position.
+            <DialogTitle className="text-slate-900 dark:text-white font-bold">Insert Web Link</DialogTitle>
+            <DialogDescription className="text-slate-500 dark:text-zinc-400 text-xs">
+              Enter the URL and optional label to embed at cursor position. Press Enter to insert.
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-3 py-2">
-            <div className="space-y-1">
-              <label className="text-xs font-medium text-zinc-300">URL</label>
-              <Input
-                placeholder="https://example.com/guide"
-                value={dialogUrl}
-                onChange={(e) => setDialogUrl(e.target.value)}
-                className="bg-zinc-900 border-white/10 text-sm"
-                autoFocus
-              />
+
+          <form onSubmit={handleInsertDialogLink} className="space-y-4 pt-1">
+            <div className="space-y-3 py-1">
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-slate-700 dark:text-zinc-300">URL *</label>
+                <Input
+                  placeholder="https://example.com/guide"
+                  value={dialogUrl}
+                  onChange={(e) => setDialogUrl(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleInsertDialogLink();
+                    }
+                  }}
+                  className="bg-slate-50 dark:bg-zinc-900 border-slate-200 dark:border-white/10 text-slate-900 dark:text-white text-sm"
+                  autoFocus
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-slate-700 dark:text-zinc-300">Label (optional)</label>
+                <Input
+                  placeholder="Documentation"
+                  value={dialogLabel}
+                  onChange={(e) => setDialogLabel(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleInsertDialogLink();
+                    }
+                  }}
+                  className="bg-slate-50 dark:bg-zinc-900 border-slate-200 dark:border-white/10 text-slate-900 dark:text-white text-sm"
+                />
+              </div>
             </div>
-            <div className="space-y-1">
-              <label className="text-xs font-medium text-zinc-300">Label (optional)</label>
-              <Input
-                placeholder="Documentation"
-                value={dialogLabel}
-                onChange={(e) => setDialogLabel(e.target.value)}
-                className="bg-zinc-900 border-white/10 text-sm"
-              />
-            </div>
-          </div>
-          <DialogFooter className="gap-2 sm:gap-0 pt-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setLinkDialogOpen(false)}
-              className="text-xs border-white/10 bg-white/5 hover:bg-white/10 text-zinc-300"
-            >
-              Cancel
-            </Button>
-            <Button
-              size="sm"
-              disabled={!dialogUrl.trim()}
-              onClick={() => {
-                let url = dialogUrl.trim();
-                if (!url.startsWith('http://') && !url.startsWith('https://')) {
-                  url = 'https://' + url;
-                }
-                const label = dialogLabel.trim() || new URL(url).hostname;
-                insertTextAtCursor(` [${label}](${url}) `);
-                setLinks((prev) => [...prev, { url, label }]);
-                setLinkDialogOpen(false);
-              }}
-              className="text-xs bg-indigo-600 hover:bg-indigo-500 text-white"
-            >
-              Insert Link
-            </Button>
-          </DialogFooter>
+
+            <DialogFooter className="gap-2 sm:gap-0 pt-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setLinkDialogOpen(false)}
+                className="text-xs border-slate-200 dark:border-white/10 bg-slate-100 hover:bg-slate-200 dark:bg-white/5 dark:hover:bg-white/10 text-slate-700 dark:text-zinc-300"
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                size="sm"
+                disabled={!dialogUrl.trim()}
+                className="text-xs bg-indigo-600 hover:bg-indigo-500 text-white font-medium"
+              >
+                Insert Link (↵)
+              </Button>
+            </DialogFooter>
+          </form>
         </DialogContent>
       </Dialog>
     </div>

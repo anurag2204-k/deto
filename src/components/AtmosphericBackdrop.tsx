@@ -6,14 +6,14 @@ export function AtmosphericBackdrop() {
       className="absolute top-0 right-0 w-full md:w-[70%] h-[340px] pointer-events-none overflow-hidden select-none z-0"
       aria-hidden="true"
     >
-      {/* Twilight atmospheric glow */}
-      <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[#090a10]/60 to-[#090a10]" />
-      <div className="absolute top-0 right-0 w-[550px] h-[280px] bg-indigo-600/10 rounded-full blur-[120px]" />
-      <div className="absolute top-10 right-24 w-[300px] h-[160px] bg-amber-500/15 rounded-full blur-[90px]" />
+      {/* Twilight / Sunrise atmospheric glow */}
+      <div className="absolute inset-0 bg-gradient-to-b from-transparent via-slate-50/70 to-slate-50 dark:via-[#090a10]/60 dark:to-[#090a10] transition-colors" />
+      <div className="absolute top-0 right-0 w-[550px] h-[280px] bg-indigo-500/10 dark:bg-indigo-600/10 rounded-full blur-[120px]" />
+      <div className="absolute top-10 right-24 w-[300px] h-[160px] bg-amber-400/10 dark:bg-amber-500/15 rounded-full blur-[90px]" />
 
       {/* Mountain silhouette SVG */}
       <svg
-        className="absolute bottom-0 right-0 w-full h-[240px] opacity-40 mix-blend-screen"
+        className="absolute bottom-0 right-0 w-full h-[240px] opacity-15 dark:opacity-40 mix-blend-multiply dark:mix-blend-screen transition-opacity"
         preserveAspectRatio="none"
         viewBox="0 0 1200 400"
         fill="none"

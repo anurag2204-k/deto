@@ -143,20 +143,20 @@ export function ActivityCalendar({
   };
 
   return (
-    <div className="rounded-2xl border border-white/10 bg-zinc-950/70 p-3.5 sm:p-6 backdrop-blur-xl shadow-lg space-y-4">
+    <div className="rounded-2xl border border-slate-200/80 dark:border-white/10 bg-white/80 dark:bg-zinc-950/70 p-3.5 sm:p-6 backdrop-blur-xl shadow-xs dark:shadow-lg space-y-4 transition-colors">
       {/* Top Section Nav Tabs */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/5 pb-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-200/80 dark:border-white/5 pb-4">
         {/* Left Title & Segment Selector */}
         <div className="flex flex-col gap-2.5">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-indigo-500/20 via-amber-500/10 to-emerald-500/10 border border-white/10 flex items-center justify-center text-indigo-400 shrink-0">
+            <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-indigo-500/15 via-amber-500/10 to-emerald-500/10 dark:from-indigo-500/20 dark:via-amber-500/10 dark:to-emerald-500/10 border border-slate-200 dark:border-white/10 flex items-center justify-center text-indigo-600 dark:text-indigo-400 shrink-0">
               <CalendarIcon className="w-4 h-4" />
             </div>
             <div>
-              <h3 className="text-sm sm:text-base font-bold text-white tracking-tight flex items-center gap-2">
+              <h3 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white tracking-tight flex items-center gap-2">
                 <span>Activity &amp; Task Heatmap Calendars</span>
               </h3>
-              <p className="text-xs text-zinc-400 mt-0.5 line-clamp-1 sm:line-clamp-none">
+              <p className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5 line-clamp-1 sm:line-clamp-none">
                 Multi-calendar tracker — switch between overall activity, study queue, and individual scheduled tasks.
               </p>
             </div>
@@ -169,11 +169,11 @@ export function ActivityCalendar({
               onClick={() => setActiveSection('overview')}
               className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5 ${
                 activeSection === 'overview'
-                  ? 'bg-indigo-600/30 border border-indigo-500/50 text-white shadow-xs'
-                  : 'bg-white/5 border border-white/5 text-zinc-400 hover:text-white hover:bg-white/10'
+                  ? 'bg-indigo-50 border border-indigo-200 text-indigo-900 shadow-xs dark:bg-indigo-600/30 dark:border-indigo-500/50 dark:text-white'
+                  : 'bg-slate-100 border border-slate-200/80 text-slate-600 hover:text-slate-900 hover:bg-slate-200/80 dark:bg-white/5 dark:border-white/5 dark:text-zinc-400 dark:hover:text-white dark:hover:bg-white/10'
               }`}
             >
-              <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
+              <Sparkles className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
               <span>Overview</span>
             </button>
 
@@ -182,11 +182,11 @@ export function ActivityCalendar({
               onClick={() => setActiveSection('queue')}
               className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5 ${
                 activeSection === 'queue'
-                  ? 'bg-indigo-600/30 border border-indigo-500/50 text-white shadow-xs'
-                  : 'bg-white/5 border border-white/5 text-zinc-400 hover:text-white hover:bg-white/10'
+                  ? 'bg-indigo-50 border border-indigo-200 text-indigo-900 shadow-xs dark:bg-indigo-600/30 dark:border-indigo-500/50 dark:text-white'
+                  : 'bg-slate-100 border border-slate-200/80 text-slate-600 hover:text-slate-900 hover:bg-slate-200/80 dark:bg-white/5 dark:border-white/5 dark:text-zinc-400 dark:hover:text-white dark:hover:bg-white/10'
               }`}
             >
-              <Layers className="w-3.5 h-3.5 text-indigo-400" />
+              <Layers className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
               <span>Queue &amp; Revisions</span>
             </button>
 
@@ -210,14 +210,14 @@ export function ActivityCalendar({
                   className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5 ${
                     isSelected
                       ? 'border shadow-xs'
-                      : 'bg-white/5 border border-white/5 text-zinc-400 hover:text-white hover:bg-white/10'
+                      : 'bg-slate-100 border border-slate-200/80 text-slate-600 hover:text-slate-900 hover:bg-slate-200/80 dark:bg-white/5 dark:border-white/5 dark:text-zinc-400 dark:hover:text-white dark:hover:bg-white/10'
                   }`}
                   style={
                     isSelected
                       ? {
                           backgroundColor: colorDef.bgSubtle,
                           borderColor: colorDef.border,
-                          color: '#ffffff',
+                          color: colorDef.text,
                           boxShadow: `0 0 10px ${colorDef.glow}`,
                         }
                       : {}
@@ -239,10 +239,10 @@ export function ActivityCalendar({
               <button
                 type="button"
                 onClick={onOpenCreateTask}
-                className="px-2.5 py-1.5 rounded-lg text-xs text-zinc-500 hover:text-emerald-400 hover:bg-white/5 transition-all flex items-center gap-1"
+                className="px-2.5 py-1.5 rounded-lg text-xs text-slate-500 hover:text-emerald-600 dark:text-zinc-500 dark:hover:text-emerald-400 hover:bg-slate-100 dark:hover:bg-white/5 transition-all flex items-center gap-1"
               >
                 <Plus className="w-3 h-3" />
-                <span>+ Create Task (Gym, etc.)</span>
+                <span>Create Task (Gym, etc.)</span>
               </button>
             )}
           </div>
@@ -488,11 +488,11 @@ export function ActivityCalendar({
                           } else {
                             // Empty rest day
                             cellClass +=
-                              'bg-zinc-900/80 border border-white/5 hover:border-white/20 hover:bg-zinc-800';
+                              'bg-slate-100 border border-slate-200/80 hover:border-slate-300 hover:bg-slate-200 dark:bg-zinc-900/80 dark:border-white/5 dark:hover:border-white/20 dark:hover:bg-zinc-800';
                           }
 
                           if (day.isToday) {
-                            cellClass += ' ring-1 ring-white/70 ring-offset-1 ring-offset-black';
+                            cellClass += ' ring-1 ring-slate-900/80 dark:ring-white/70 ring-offset-1 ring-offset-white dark:ring-offset-black';
                           }
 
                           return (
@@ -524,7 +524,7 @@ export function ActivityCalendar({
           <div className="min-h-[26px] flex flex-wrap items-center justify-between gap-3 text-xs pt-2 text-zinc-400">
             {hoveredTaskDay ? (
               <div className="flex items-center gap-2 animate-in fade-in duration-150">
-                <span className="font-medium text-white">{formatDateFriendly(hoveredTaskDay.date)}:</span>
+                <span className="font-medium text-slate-900 dark:text-white">{formatDateFriendly(hoveredTaskDay.date)}:</span>
                 {hoveredTaskDay.hasSession ? (
                   <span
                     className="inline-flex items-center gap-1.5 text-xs font-semibold"
@@ -537,35 +537,35 @@ export function ActivityCalendar({
                     ✓ {selectedTask.title} Completed!
                   </span>
                 ) : hoveredTaskDay.weekGoalAchieved ? (
-                  <span className="inline-flex items-center gap-1.5 text-xs text-emerald-300 font-medium">
-                    <Trophy className="w-3.5 h-3.5 text-amber-400" />
+                  <span className="inline-flex items-center gap-1.5 text-xs text-emerald-600 dark:text-emerald-300 font-medium">
+                    <Trophy className="w-3.5 h-3.5 text-amber-500 dark:text-amber-400" />
                     Rest Day — Weekly Goal ({selectedTaskGoal.targetDays} days) Achieved for this Week!
                   </span>
                 ) : hoveredTaskDay.isFuture ? (
-                  <span className="text-zinc-600">Upcoming day</span>
+                  <span className="text-slate-400 dark:text-zinc-600">Upcoming day</span>
                 ) : (
-                  <span className="text-zinc-500">No session logged on this date</span>
+                  <span className="text-slate-500 dark:text-zinc-500">No session logged on this date</span>
                 )}
               </div>
             ) : (
-              <span className="text-[11px] text-zinc-500">
+              <span className="text-[11px] text-slate-500 dark:text-zinc-500">
                 Hover over any day box to inspect session logs and weekly goal completions
               </span>
             )}
 
             {/* Task Legend */}
-            <div className="flex items-center gap-3 text-[11px] text-zinc-400 shrink-0">
-              <span className="text-zinc-600">Legend:</span>
+            <div className="flex items-center gap-3 text-[11px] text-slate-500 dark:text-zinc-400 shrink-0">
+              <span className="text-slate-500 dark:text-zinc-500 font-medium">Legend:</span>
               <div className="flex items-center gap-1">
-                <div className="w-2.5 h-2.5 rounded-[2px] bg-zinc-900 border border-white/10" />
-                <span className="text-zinc-500 text-[10px]">Rest Day</span>
+                <div className="w-2.5 h-2.5 rounded-[2px] bg-slate-200 dark:bg-zinc-900 border border-slate-300 dark:border-white/10" />
+                <span className="text-slate-600 dark:text-zinc-400 text-[10px]">Rest Day</span>
               </div>
               <div className="flex items-center gap-1">
                 <div
                   className="w-2.5 h-2.5 rounded-[2px]"
                   style={{ backgroundColor: selectedTaskColor.hex }}
                 />
-                <span className="text-white text-[10px] font-medium">Session Logged</span>
+                <span className="text-slate-800 dark:text-white text-[10px] font-medium">Session Logged</span>
               </div>
               <div className="flex items-center gap-1">
                 <div
@@ -648,11 +648,11 @@ export function ActivityCalendar({
                         } else {
                           // Empty / no activity
                           cellClass +=
-                            'bg-zinc-900/80 border border-white/5 hover:border-white/20 hover:bg-zinc-800';
+                            'bg-slate-100 border border-slate-200/80 hover:border-slate-300 hover:bg-slate-200 dark:bg-zinc-900/80 dark:border-white/5 dark:hover:border-white/20 dark:hover:bg-zinc-800';
                         }
 
                         if (day.isToday) {
-                          cellClass += ' ring-1 ring-white/60 ring-offset-1 ring-offset-black';
+                          cellClass += ' ring-1 ring-slate-900/80 dark:ring-white/60 ring-offset-1 ring-offset-white dark:ring-offset-black';
                         }
 
                         return (
@@ -682,60 +682,60 @@ export function ActivityCalendar({
           </div>
 
           {/* Hover Tooltip display banner */}
-          <div className="min-h-[26px] flex flex-wrap items-center justify-between gap-3 text-xs pt-2 text-zinc-400">
+          <div className="min-h-[26px] flex flex-wrap items-center justify-between gap-3 text-xs pt-2 text-slate-500 dark:text-zinc-400">
             {hoveredOverviewDay ? (
               <div className="flex items-center gap-2 animate-in fade-in duration-150">
-                <span className="font-medium text-white">{formatDateFriendly(hoveredOverviewDay.date)}:</span>
+                <span className="font-medium text-slate-900 dark:text-white">{formatDateFriendly(hoveredOverviewDay.date)}:</span>
                 {hoveredOverviewDay.hasBoth && activeSection !== 'queue' ? (
-                  <span className="inline-flex items-center gap-1.5 text-xs text-white font-semibold">
-                    <span className="w-2 h-2 rounded-full bg-gradient-to-r from-indigo-400 to-amber-400" />
+                  <span className="inline-flex items-center gap-1.5 text-xs text-slate-900 dark:text-white font-semibold">
+                    <span className="w-2 h-2 rounded-full bg-gradient-to-r from-indigo-500 to-amber-500" />
                     Both Done! (Topic Revision &amp; Scheduled Task Logged)
                   </span>
                 ) : hoveredOverviewDay.hasQueue ? (
-                  <span className="inline-flex items-center gap-1.5 text-xs text-indigo-300 font-medium">
-                    <span className="w-2 h-2 rounded-full bg-indigo-400 shadow-[0_0_5px_#6366f1]" />
+                  <span className="inline-flex items-center gap-1.5 text-xs text-indigo-700 dark:text-indigo-300 font-medium">
+                    <span className="w-2 h-2 rounded-full bg-indigo-500 shadow-[0_0_5px_#6366f1]" />
                     Topic Queue / Revision Completed
                   </span>
                 ) : hoveredOverviewDay.hasRing && activeSection !== 'queue' ? (
-                  <span className="inline-flex items-center gap-1.5 text-xs text-amber-300 font-medium">
-                    <span className="w-2 h-2 rounded-full bg-amber-400 shadow-[0_0_5px_#f59e0b]" />
+                  <span className="inline-flex items-center gap-1.5 text-xs text-amber-700 dark:text-amber-300 font-medium">
+                    <span className="w-2 h-2 rounded-full bg-amber-500 shadow-[0_0_5px_#f59e0b]" />
                     Scheduled Task Session Logged
                   </span>
                 ) : hoveredOverviewDay.isFuture ? (
-                  <span className="text-zinc-600">Upcoming day</span>
+                  <span className="text-slate-400 dark:text-zinc-600">Upcoming day</span>
                 ) : (
-                  <span className="text-zinc-500">No sessions logged on this day</span>
+                  <span className="text-slate-500 dark:text-zinc-500">No sessions logged on this day</span>
                 )}
               </div>
             ) : (
-              <span className="text-[11px] text-zinc-500">
+              <span className="text-[11px] text-slate-500 dark:text-zinc-500">
                 Hover over any day box to inspect session details, or click on a task pill above to open its personal calendar
               </span>
             )}
 
             {/* Color Legend */}
-            <div className="flex items-center gap-3 text-[11px] text-zinc-400 shrink-0">
-              <span className="text-zinc-600">Legend:</span>
+            <div className="flex items-center gap-3 text-[11px] text-slate-500 dark:text-zinc-400 shrink-0">
+              <span className="text-slate-500 dark:text-zinc-500 font-medium">Legend:</span>
               <div className="flex items-center gap-1">
-                <div className="w-2.5 h-2.5 rounded-[2px] bg-zinc-900 border border-white/10" />
-                <span className="text-zinc-500 text-[10px]">None</span>
+                <div className="w-2.5 h-2.5 rounded-[2px] bg-slate-200 dark:bg-zinc-900 border border-slate-300 dark:border-white/10" />
+                <span className="text-slate-600 dark:text-zinc-400 text-[10px]">None</span>
               </div>
               <div className="flex items-center gap-1">
                 <div className="w-2.5 h-2.5 rounded-[2px] bg-indigo-500 shadow-[0_0_5px_#6366f1]" />
-                <span className="text-indigo-300 text-[10px]">Queue / Rev</span>
+                <span className="text-indigo-700 dark:text-indigo-300 text-[10px] font-medium">Queue / Rev</span>
               </div>
               {activeSection !== 'queue' && (
                 <>
                   <div className="flex items-center gap-1">
                     <div className="w-2.5 h-2.5 rounded-[2px] bg-amber-400 shadow-[0_0_5px_#f59e0b]" />
-                    <span className="text-amber-300 text-[10px]">Task Session</span>
+                    <span className="text-amber-700 dark:text-amber-300 text-[10px] font-medium">Task Session</span>
                   </div>
                   <div className="flex items-center gap-1">
                     <div
                       className="w-2.5 h-2.5 rounded-[2px] border border-indigo-400/60"
                       style={{ background: 'linear-gradient(135deg, #6366f1 50%, #f59e0b 50%)' }}
                     />
-                    <span className="text-white text-[10px] font-medium">Both</span>
+                    <span className="text-slate-800 dark:text-white text-[10px] font-medium">Both</span>
                   </div>
                 </>
               )}

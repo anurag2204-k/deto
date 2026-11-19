@@ -2,6 +2,8 @@ import type { Metadata, Viewport } from 'next';
 import { Geist, Geist_Mono } from 'next/font/google';
 import './globals.css';
 
+import { ThemeProvider } from '@/components/ThemeProvider';
+
 const geistSans = Geist({
   variable: '--font-sans',
   subsets: ['latin'],
@@ -42,9 +44,12 @@ export default function RootLayout({
     <html
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} dark h-full antialiased`}
+      suppressHydrationWarning
     >
-      <body className="min-h-full flex flex-col bg-[#090a10] text-[#f8fafc] selection:bg-indigo-500/30 selection:text-white">
-        {children}
+      <body className="min-h-full flex flex-col bg-slate-50 dark:bg-[#090a10] text-slate-900 dark:text-[#f8fafc] selection:bg-indigo-500/30 selection:text-white transition-colors duration-200">
+        <ThemeProvider>
+          {children}
+        </ThemeProvider>
       </body>
     </html>
   );

@@ -64,6 +64,17 @@ export interface RingSettings {
   history?: string[]; // Dates when sessions were completed [YYYY-MM-DD]
 }
 
+export interface TopicQueueItem {
+  id: string;
+  text: string;
+  reasoning?: string;
+  order: number;
+  completed: boolean;
+  reviewCount: number;
+  lastReviewedAt?: string;
+  createdAt: string;
+}
+
 export interface TopicDoc {
   _id: ObjectId;
   title: string;
@@ -74,6 +85,7 @@ export interface TopicDoc {
   queuePos: number;
   revision: TopicRevision;
   ring?: RingSettings;
+  queueItems?: TopicQueueItem[];
   createdAt: Date;
   updatedAt: Date;
 }
@@ -88,6 +100,7 @@ export interface Topic {
   queuePos: number;
   revision: TopicRevision;
   ring?: RingSettings;
+  queueItems?: TopicQueueItem[];
   createdAt: string;
   updatedAt: string;
 }
@@ -144,6 +157,7 @@ export function serializeTopic(doc: TopicDoc): Topic {
     queuePos: doc.queuePos,
     revision: doc.revision,
     ring: doc.ring,
+    queueItems: doc.queueItems || [],
     createdAt: doc.createdAt instanceof Date ? doc.createdAt.toISOString() : String(doc.createdAt),
     updatedAt: doc.updatedAt instanceof Date ? doc.updatedAt.toISOString() : String(doc.updatedAt),
   };
@@ -212,4 +226,85 @@ export function serializeTask(doc: TaskDoc): Task {
     updatedAt: doc.updatedAt instanceof Date ? doc.updatedAt.toISOString() : String(doc.updatedAt),
   };
 }
+
+// ----------------------------------------------------
+// Standalone Hierarchical To-Do Lists (Folders & Subfolders)
+// ----------------------------------------------------
+
+export interface TodoFolderDoc {
+  _id: ObjectId;
+  name: string;
+  parentId?: ObjectId | null;
+  color?: string;
+  order: number;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface TodoFolder {
+  _id: string;
+  name: string;
+  parentId: string | null;
+  color?: string;
+  order: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface TodoSubtask {
+  id: string;
+  text: string;
+  done: boolean;
+}
+
+export interface TodoItemDoc {
+  _id: ObjectId;
+  folderId?: ObjectId | null;
+  text: string;
+  done: boolean;
+  notes?: string;
+  order: number;
+  subtasks?: TodoSubtask[];
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface TodoItem {
+  _id: string;
+  folderId: string | null;
+  text: string;
+  done: boolean;
+  notes?: string;
+  order: number;
+  subtasks: TodoSubtask[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export function serializeTodoFolder(doc: TodoFolderDoc): TodoFolder {
+  return {
+    _id: doc._id.toString(),
+    name: doc.name,
+    parentId: doc.parentId ? doc.parentId.toString() : null,
+    color: doc.color || 'indigo',
+    order: typeof doc.order === 'number' ? doc.order : 0,
+    createdAt: doc.createdAt instanceof Date ? doc.createdAt.toISOString() : String(doc.createdAt),
+    updatedAt: doc.updatedAt instanceof Date ? doc.updatedAt.toISOString() : String(doc.updatedAt),
+  };
+}
+
+export function serializeTodoItem(doc: TodoItemDoc): TodoItem {
+  return {
+    _id: doc._id.toString(),
+    folderId: doc.folderId ? doc.folderId.toString() : null,
+    text: doc.text,
+    done: Boolean(doc.done),
+    notes: doc.notes,
+    order: typeof doc.order === 'number' ? doc.order : 0,
+    subtasks: doc.subtasks || [],
+    createdAt: doc.createdAt instanceof Date ? doc.createdAt.toISOString() : String(doc.createdAt),
+    updatedAt: doc.updatedAt instanceof Date ? doc.updatedAt.toISOString() : String(doc.updatedAt),
+  };
+}
+
 

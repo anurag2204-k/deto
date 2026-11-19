@@ -1,4 +1,4 @@
-import { ActivityMap, LightweightTopic, RingFrequency, RingSettings, Topic, TopicFile, Task } from './types';
+import { ActivityMap, LightweightTopic, RingFrequency, RingSettings, Topic, TopicFile, TopicQueueItem, Task, TodoFolder, TodoItem } from './types';
 
 export class ApiError extends Error {
   status: number;
@@ -80,12 +80,24 @@ export async function updateTopic(
     links?: { url: string; label: string }[];
     files?: TopicFile[];
     ring?: RingSettings;
+    queueItems?: TopicQueueItem[];
   }
 ): Promise<Topic> {
   return request<Topic>(`/api/topics/${id}`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
+  });
+}
+
+export async function updateTopicQueue(
+  id: string,
+  queueItems: TopicQueueItem[]
+): Promise<Topic> {
+  return request<Topic>(`/api/topics/${id}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ queueItems }),
   });
 }
 
@@ -231,3 +243,83 @@ export async function addTaskTodo(id: string, text: string): Promise<Task> {
     body: JSON.stringify({ addText: text }),
   });
 }
+
+// ----------------------------------------------------
+// Standalone To-Do List APIs (Folders & To-Dos)
+// ----------------------------------------------------
+
+export async function getTodos(): Promise<{ folders: TodoFolder[]; items: TodoItem[] }> {
+  return request<{ folders: TodoFolder[]; items: TodoItem[] }>('/api/todos');
+}
+
+export async function createTodoFolder(data: {
+  name: string;
+  parentId?: string | null;
+  color?: string;
+}): Promise<TodoFolder> {
+  return request<TodoFolder>('/api/todos/folders', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+}
+
+export async function updateTodoFolder(
+  id: string,
+  data: {
+    name?: string;
+    parentId?: string | null;
+    color?: string;
+    order?: number;
+  }
+): Promise<TodoFolder> {
+  return request<TodoFolder>(`/api/todos/folders/${id}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+}
+
+export async function deleteTodoFolder(id: string): Promise<void> {
+  await request<{ success: boolean }>(`/api/todos/folders/${id}`, {
+    method: 'DELETE',
+  });
+}
+
+export async function createTodoItem(data: {
+  text: string;
+  folderId?: string | null;
+  notes?: string;
+  subtasks?: Array<{ id?: string; text: string; done?: boolean }>;
+}): Promise<TodoItem> {
+  return request<TodoItem>('/api/todos/items', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+}
+
+export async function updateTodoItem(
+  id: string,
+  data: Partial<{
+    text: string;
+    done: boolean;
+    folderId: string | null;
+    notes?: string;
+    order: number;
+    subtasks: Array<{ id: string; text: string; done: boolean }>;
+  }>
+): Promise<TodoItem> {
+  return request<TodoItem>(`/api/todos/items/${id}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+}
+
+export async function deleteTodoItem(id: string): Promise<void> {
+  await request<{ success: boolean }>(`/api/todos/items/${id}`, {
+    method: 'DELETE',
+  });
+}
+

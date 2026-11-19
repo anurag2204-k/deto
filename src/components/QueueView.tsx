@@ -88,8 +88,8 @@ function SortableQueueRow({
     <div
       ref={setNodeRef}
       style={style}
-      className={`group flex items-center justify-between p-3.5 sm:p-4 rounded-xl border border-white/5 bg-zinc-950/60 hover:bg-zinc-900/80 hover:border-indigo-500/30 transition-all duration-150 shadow-xs cursor-pointer ${
-        isDragging ? 'ring-2 ring-indigo-500 z-20 bg-zinc-900' : ''
+      className={`group flex items-center justify-between p-3.5 sm:p-4 rounded-xl border border-slate-200/80 bg-white hover:bg-slate-50 hover:border-indigo-300 shadow-xs dark:border-white/5 dark:bg-zinc-950/60 dark:hover:bg-zinc-900/80 dark:hover:border-indigo-500/30 transition-all duration-150 cursor-pointer ${
+        isDragging ? 'ring-2 ring-indigo-500 z-20 bg-slate-100 dark:bg-zinc-900' : ''
       }`}
       onClick={onSelect}
     >
@@ -97,7 +97,7 @@ function SortableQueueRow({
         {isOwner && (
           <button
             type="button"
-            className="cursor-grab active:cursor-grabbing p-1 -ml-1 rounded hover:bg-white/10 text-zinc-500 hover:text-zinc-300 transition-colors shrink-0"
+            className="cursor-grab active:cursor-grabbing p-1 -ml-1 rounded hover:bg-slate-100 dark:hover:bg-white/10 text-slate-400 dark:text-zinc-500 hover:text-slate-600 dark:hover:text-zinc-300 transition-colors shrink-0"
             onClick={(e) => e.stopPropagation()}
             {...attributes}
             {...listeners}
@@ -109,22 +109,22 @@ function SortableQueueRow({
 
         <TopicArtwork title={topic.title} size="sm" />
 
-        <div className="truncate">
-          <p className="font-medium text-sm text-zinc-100 truncate group-hover:text-indigo-300 transition-colors">
+        <div className="truncate flex-1 min-w-0">
+          <p className="font-medium text-sm text-slate-900 dark:text-zinc-100 truncate group-hover:text-indigo-600 dark:group-hover:text-indigo-300 transition-colors">
             {topic.title}
           </p>
         </div>
       </div>
 
       <div className="flex items-center gap-2 sm:gap-4 shrink-0">
-        <div className="hidden sm:flex items-center gap-1.5 text-xs text-zinc-400">
-          <Calendar className="w-3.5 h-3.5 text-zinc-500" />
+        <div className="hidden sm:flex items-center gap-1.5 text-xs text-slate-500 dark:text-zinc-400">
+          <Calendar className="w-3.5 h-3.5 text-slate-400 dark:text-zinc-500" />
           <span>{topic.studiedOn}</span>
         </div>
 
         <Badge
           variant="secondary"
-          className="bg-zinc-900/90 text-zinc-400 border border-white/5 text-xs font-normal"
+          className="bg-slate-100 dark:bg-zinc-900/90 text-slate-600 dark:text-zinc-400 border border-slate-200 dark:border-white/5 text-xs font-normal"
         >
           Queue #{queueIndex}
         </Badge>
@@ -137,7 +137,7 @@ function SortableQueueRow({
                 e.stopPropagation();
                 onEdit();
               }}
-              className="p-1.5 rounded-lg hover:bg-white/10 text-zinc-400 hover:text-white transition-colors"
+              className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-white/10 text-slate-500 hover:text-slate-900 dark:text-zinc-400 dark:hover:text-white transition-colors"
               title="Edit Topic"
             >
               <Edit2 className="w-3.5 h-3.5" />
@@ -148,7 +148,7 @@ function SortableQueueRow({
                 e.stopPropagation();
                 onDelete();
               }}
-              className="p-1.5 rounded-lg hover:bg-red-500/10 text-zinc-400 hover:text-red-400 transition-colors"
+              className="p-1.5 rounded-lg hover:bg-red-500/10 text-slate-400 hover:text-red-500 dark:text-zinc-400 dark:hover:text-red-400 transition-colors"
               title="Delete Topic"
             >
               <Trash2 className="w-3.5 h-3.5" />
@@ -309,12 +309,12 @@ export function QueueView({
 
   if (topics.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-20 px-4 text-center rounded-2xl border border-white/10 bg-zinc-950/40 backdrop-blur-md shadow-xs">
-        <div className="w-14 h-14 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 flex items-center justify-center mb-4 shadow-lg shadow-indigo-500/10">
+      <div className="flex flex-col items-center justify-center py-20 px-4 text-center rounded-2xl border border-slate-200/80 dark:border-white/10 bg-white/80 dark:bg-zinc-950/40 backdrop-blur-md shadow-xs">
+        <div className="w-14 h-14 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-600 dark:text-indigo-400 flex items-center justify-center mb-4 shadow-lg shadow-indigo-500/10">
           <Sparkles className="w-7 h-7" />
         </div>
-        <h3 className="text-xl font-bold tracking-tight text-white">Your Task Queue is Empty</h3>
-        <p className="text-sm text-zinc-400 max-w-sm mt-2 mb-6">
+        <h3 className="text-xl font-bold tracking-tight text-slate-900 dark:text-white">Your Task Queue is Empty</h3>
+        <p className="text-sm text-slate-600 dark:text-zinc-400 max-w-sm mt-2 mb-6">
           Add tasks to start your daily FIFO rotation and habit tracking cycle.
         </p>
         {isOwner && (
@@ -354,13 +354,13 @@ export function QueueView({
               <Sparkles className="w-4 h-4 text-indigo-400" />
             </div>
             <div className="flex-1 min-w-0 pr-2">
-              <p className="font-semibold text-sm text-white flex items-center gap-2">
+              <p className="font-semibold text-sm text-slate-900 dark:text-white flex items-center gap-2">
                 <span>{cycleNotice.title}</span>
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
                   Cycled ✓
                 </span>
               </p>
-              <p className="mt-1 leading-relaxed text-zinc-300">{cycleNotice.message}</p>
+              <p className="mt-1 leading-relaxed text-slate-600 dark:text-zinc-300">{cycleNotice.message}</p>
             </div>
             <button
               type="button"
@@ -378,8 +378,8 @@ export function QueueView({
           className={`relative group rounded-2xl border ${
             justCycled
               ? 'border-emerald-500/60 shadow-[0_0_35px_rgba(16,185,129,0.25)] ring-1 ring-emerald-500/40'
-              : 'border-indigo-500/40 shadow-[0_0_30px_rgba(99,102,241,0.15)]'
-          } bg-gradient-to-r from-indigo-950/40 via-zinc-950/80 to-zinc-950/90 p-5 sm:p-6 backdrop-blur-xl transition-all duration-300 overflow-hidden`}
+              : 'border-indigo-200/90 dark:border-indigo-500/40 shadow-sm dark:shadow-[0_0_30px_rgba(99,102,241,0.15)]'
+          } bg-gradient-to-r from-indigo-50/70 via-white to-white dark:from-indigo-950/40 dark:via-zinc-950/80 dark:to-zinc-950/90 p-4 sm:p-6 backdrop-blur-xl transition-all duration-300 overflow-hidden`}
         >
           <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
             <div className="flex items-start sm:items-center gap-4 sm:gap-5 flex-1 min-w-0 w-full">
@@ -398,8 +398,8 @@ export function QueueView({
               {/* Main Content */}
               <div className="space-y-2 flex-1 min-w-0">
                 <div className="flex flex-wrap items-center gap-2">
-                  <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 shrink-0">
-                    <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-pulse" />
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-500/10 text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-300 border border-indigo-500/20 dark:border-indigo-500/30 shrink-0">
+                    <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 dark:bg-indigo-400 animate-pulse" />
                     Today&apos;s Focus Task
                   </span>
 
@@ -408,36 +408,36 @@ export function QueueView({
                     notes={todayTopicFull?.notes}
                   />
 
-                  <span className="text-xs text-zinc-500 shrink-0">
+                  <span className="text-xs text-slate-500 dark:text-zinc-500 shrink-0">
                     Queue #1 • Stage {topTopicSummary.revision.stage}
                   </span>
                 </div>
 
-                <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-white leading-tight break-words">
+                <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 dark:text-white leading-tight break-words">
                   {topTopicSummary.title}
                 </h2>
 
-                <p className="text-xs sm:text-sm text-zinc-400 line-clamp-2 max-w-2xl leading-relaxed break-words">
+                <p className="text-xs sm:text-sm text-slate-600 dark:text-zinc-400 line-clamp-2 max-w-2xl leading-relaxed break-words">
                   {notesSnippet}
                 </p>
 
                 {/* Metadata Pills */}
-                <div className="flex flex-wrap items-center gap-3 pt-1 text-xs text-zinc-400">
+                <div className="flex flex-wrap items-center gap-3 pt-1 text-xs text-slate-500 dark:text-zinc-400">
                   <span className="inline-flex items-center gap-1 shrink-0">
-                    <Calendar className="w-3.5 h-3.5 text-zinc-500" />
+                    <Calendar className="w-3.5 h-3.5 text-slate-400 dark:text-zinc-500" />
                     Date: {topTopicSummary.studiedOn}
                   </span>
 
                   {todayTopicFull?.links && todayTopicFull.links.length > 0 && (
                     <span className="inline-flex items-center gap-1 shrink-0">
-                      <LinkIcon className="w-3.5 h-3.5 text-indigo-400" />
+                      <LinkIcon className="w-3.5 h-3.5 text-indigo-500 dark:text-indigo-400" />
                       {todayTopicFull.links.length} {todayTopicFull.links.length === 1 ? 'Link' : 'Links'}
                     </span>
                   )}
 
                   {todayTopicFull?.files && todayTopicFull.files.length > 0 && (
                     <span className="inline-flex items-center gap-1 shrink-0">
-                      <Paperclip className="w-3.5 h-3.5 text-amber-400" />
+                      <Paperclip className="w-3.5 h-3.5 text-amber-500 dark:text-amber-400" />
                       {todayTopicFull.files.length} {todayTopicFull.files.length === 1 ? 'File' : 'Files'}
                     </span>
                   )}
@@ -445,8 +445,8 @@ export function QueueView({
               </div>
             </div>
 
-            {/* Right Action buttons - Responsive layout so preview & edit never go out of the window */}
-            <div className="flex flex-col sm:flex-row lg:flex-col items-stretch sm:items-center lg:items-end justify-between sm:justify-start gap-3 w-full lg:w-auto shrink-0 border-t border-white/5 lg:border-t-0 pt-4 lg:pt-0">
+            {/* Right Action buttons - Responsive layout */}
+            <div className="flex flex-col sm:flex-row lg:flex-col items-stretch sm:items-center lg:items-end justify-between sm:justify-start gap-3 w-full lg:w-auto shrink-0 border-t border-slate-200/80 dark:border-white/5 lg:border-t-0 pt-4 lg:pt-0">
               {isOwner && (
                 <Button
                   onClick={handleQueueDone}
@@ -479,9 +479,9 @@ export function QueueView({
               <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto justify-start sm:justify-end">
                 <a
                   href={`/topics/${topTopicSummary._id}`}
-                  className="inline-flex items-center h-8 px-3 text-xs rounded-lg border border-white/10 bg-white/5 hover:bg-white/10 text-zinc-300 gap-1.5 transition-colors font-medium shrink-0"
+                  className="inline-flex items-center h-8 px-3 text-xs rounded-lg border border-slate-200 dark:border-white/10 bg-slate-100 hover:bg-slate-200/80 text-slate-700 dark:bg-white/5 dark:hover:bg-white/10 dark:text-zinc-300 gap-1.5 transition-colors font-medium shrink-0"
                 >
-                  <BookOpen className="w-3.5 h-3.5 text-indigo-400" />
+                  <BookOpen className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
                   <span>Read Note Page</span>
                 </a>
 
@@ -490,7 +490,7 @@ export function QueueView({
                     variant="ghost"
                     size="sm"
                     onClick={() => setExpandedDetails(!expandedDetails)}
-                    className="h-8 text-xs text-zinc-400 hover:text-white hover:bg-white/5 gap-1 px-2.5"
+                    className="h-8 text-xs text-slate-600 hover:text-slate-900 hover:bg-slate-100 dark:text-zinc-400 dark:hover:text-white dark:hover:bg-white/5 gap-1 px-2.5"
                   >
                     {expandedDetails ? (
                       <>
@@ -508,7 +508,7 @@ export function QueueView({
                       variant="ghost"
                       size="sm"
                       onClick={() => onEditTopic(todayTopicFull)}
-                      className="h-8 text-xs text-zinc-400 hover:text-white hover:bg-white/5 gap-1 px-2.5"
+                      className="h-8 text-xs text-slate-600 hover:text-slate-900 hover:bg-slate-100 dark:text-zinc-400 dark:hover:text-white dark:hover:bg-white/5 gap-1 px-2.5"
                     >
                       <Edit2 className="w-3.5 h-3.5" /> Edit
                     </Button>
@@ -537,10 +537,10 @@ export function QueueView({
       <section className="space-y-4">
         <div className="flex items-center justify-between">
           <div>
-            <h3 className="text-base sm:text-lg font-bold tracking-tight text-white">
+            <h3 className="text-base sm:text-lg font-bold tracking-tight text-slate-900 dark:text-white">
               Your Task Queue
             </h3>
-            <p className="text-xs text-zinc-400 mt-0.5">
+            <p className="text-xs text-slate-600 dark:text-zinc-400 mt-0.5">
               Drag to reorder. Complete today&apos;s task to move it to the bottom.
             </p>
           </div>
@@ -550,9 +550,9 @@ export function QueueView({
               variant="outline"
               size="sm"
               onClick={onOpenAddModal}
-              className="h-8 text-xs border-white/10 bg-zinc-900/80 hover:bg-zinc-800 text-zinc-200 gap-1.5 rounded-lg"
+              className="h-8 text-xs border-slate-200 dark:border-white/10 bg-slate-100 hover:bg-slate-200 dark:bg-zinc-900/80 dark:hover:bg-zinc-800 text-slate-800 dark:text-zinc-200 gap-1.5 rounded-lg"
             >
-              <Plus className="w-3.5 h-3.5 text-indigo-400" />
+              <Plus className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
               <span>Add Task</span>
             </Button>
           )}

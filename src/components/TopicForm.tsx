@@ -381,6 +381,12 @@ export function TopicForm({
                 placeholder="https://example.com/paper.pdf"
                 value={newUrl}
                 onChange={(e) => setNewUrl(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    handleAddLink();
+                  }
+                }}
                 className="text-xs"
                 disabled={submitting}
               />
@@ -388,6 +394,12 @@ export function TopicForm({
                 placeholder="Label (optional)"
                 value={newLabel}
                 onChange={(e) => setNewLabel(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    handleAddLink();
+                  }
+                }}
                 className="text-xs sm:max-w-[180px]"
                 disabled={submitting}
               />
@@ -399,7 +411,7 @@ export function TopicForm({
                 disabled={!newUrl.trim() || submitting}
                 className="gap-1 text-xs shrink-0"
               >
-                <Plus className="w-3.5 h-3.5" /> Add
+                <Plus className="w-3.5 h-3.5" /> Add (↵)
               </Button>
             </div>
           </div>

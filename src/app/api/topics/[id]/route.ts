@@ -11,7 +11,7 @@ import {
   sanitizeFiles,
 } from '@/lib/validate';
 import { addDaysToDate } from '@/lib/logic';
-import { INTERVAL_DAYS, RingColor, RingFrequency, TopicDoc, serializeTopic } from '@/lib/types';
+import { INTERVAL_DAYS, RingColor, RingFrequency, TopicDoc, TopicQueueItem, serializeTopic } from '@/lib/types';
 
 export async function GET(
   request: NextRequest,
@@ -147,6 +147,26 @@ export async function PATCH(
         history: newHistory,
       };
     }
+  }
+
+  if (body.queueItems !== undefined) {
+    if (!Array.isArray(body.queueItems)) {
+      return NextResponse.json({ error: 'queueItems must be an array' }, { status: 400 });
+    }
+    const sanitizedQueueItems: TopicQueueItem[] = (body.queueItems as any[])
+      .map((item, idx) => ({
+        id: typeof item.id === 'string' && item.id.trim() ? item.id.trim() : `item-${Date.now()}-${idx}`,
+        text: typeof item.text === 'string' ? item.text.trim() : '',
+        reasoning: typeof item.reasoning === 'string' && item.reasoning.trim() ? item.reasoning.trim() : undefined,
+        order: typeof item.order === 'number' ? item.order : idx + 1,
+        completed: Boolean(item.completed),
+        reviewCount: typeof item.reviewCount === 'number' ? item.reviewCount : 0,
+        lastReviewedAt: typeof item.lastReviewedAt === 'string' ? item.lastReviewedAt : undefined,
+        createdAt: typeof item.createdAt === 'string' ? item.createdAt : new Date().toISOString(),
+      }))
+      .filter((item) => item.text.length > 0);
+
+    updates.queueItems = sanitizedQueueItems;
   }
 
   await topicsCollection.updateOne(

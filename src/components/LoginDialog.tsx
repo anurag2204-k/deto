@@ -49,26 +49,26 @@ export function LoginDialog({ open, onOpenChange, onSuccess }: LoginDialogProps)
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-[92vw] sm:max-w-[400px] bg-[#0f111a] border border-white/10 text-white rounded-2xl shadow-2xl p-4 sm:p-6">
+      <DialogContent className="w-[92vw] sm:max-w-[400px] bg-white dark:bg-[#0f111a] border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white rounded-2xl shadow-2xl p-4 sm:p-6">
         <DialogHeader>
-          <div className="w-10 h-10 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 flex items-center justify-center mb-2">
+          <div className="w-10 h-10 rounded-xl bg-indigo-500/10 dark:bg-indigo-500/15 border border-indigo-200 dark:border-indigo-500/20 text-indigo-600 dark:text-indigo-400 flex items-center justify-center mb-2">
             <Lock className="w-5 h-5" />
           </div>
-          <DialogTitle className="text-white text-lg font-bold">Owner Login</DialogTitle>
-          <DialogDescription className="text-zinc-400 text-xs">
+          <DialogTitle className="text-slate-900 dark:text-white text-lg font-bold">Owner Login</DialogTitle>
+          <DialogDescription className="text-slate-500 dark:text-zinc-400 text-xs">
             Authenticate to manage topics, revise notes, and reorder the queue.
           </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4 pt-2">
           {error && (
-            <div className="p-3 text-xs text-red-400 bg-red-500/10 rounded-xl border border-red-500/20">
+            <div className="p-3 text-xs text-red-600 dark:text-red-400 bg-red-500/10 rounded-xl border border-red-500/20">
               {error}
             </div>
           )}
 
           <div className="space-y-1.5">
-            <label htmlFor="username" className="text-xs font-medium text-zinc-300">
+            <label htmlFor="username" className="text-xs font-medium text-slate-700 dark:text-zinc-300">
               Username
             </label>
             <Input
@@ -80,12 +80,12 @@ export function LoginDialog({ open, onOpenChange, onSuccess }: LoginDialogProps)
               required
               disabled={loading}
               placeholder="Username"
-              className="bg-zinc-900 border-white/10 text-white text-sm focus:border-indigo-500"
+              className="bg-slate-50 dark:bg-zinc-900 border-slate-200 dark:border-white/10 text-slate-900 dark:text-white text-sm focus:border-indigo-500"
             />
           </div>
 
           <div className="space-y-1.5">
-            <label htmlFor="password" className="text-xs font-medium text-zinc-300">
+            <label htmlFor="password" className="text-xs font-medium text-slate-700 dark:text-zinc-300">
               Password
             </label>
             <Input
@@ -97,18 +97,18 @@ export function LoginDialog({ open, onOpenChange, onSuccess }: LoginDialogProps)
               required
               disabled={loading}
               placeholder="••••••••"
-              className="bg-zinc-900 border-white/10 text-white text-sm focus:border-indigo-500"
+              className="bg-slate-50 dark:bg-zinc-900 border-slate-200 dark:border-white/10 text-slate-900 dark:text-white text-sm focus:border-indigo-500"
             />
           </div>
 
-          <div className="flex justify-end gap-2 pt-3 border-t border-white/5">
+          <div className="flex justify-end gap-2 pt-3 border-t border-slate-200/80 dark:border-white/5">
             <Button
               type="button"
               variant="outline"
               size="sm"
               onClick={() => onOpenChange(false)}
               disabled={loading}
-              className="text-xs border-white/10 bg-white/5 hover:bg-white/10 text-zinc-300"
+              className="text-xs border-slate-200 dark:border-white/10 bg-slate-100 hover:bg-slate-200 dark:bg-white/5 dark:hover:bg-white/10 text-slate-700 dark:text-zinc-300"
             >
               Cancel
             </Button>
