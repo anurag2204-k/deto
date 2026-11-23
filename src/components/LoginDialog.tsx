@@ -17,9 +17,10 @@ interface LoginDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSuccess: () => void;
+  notice?: string | null;
 }
 
-export function LoginDialog({ open, onOpenChange, onSuccess }: LoginDialogProps) {
+export function LoginDialog({ open, onOpenChange, onSuccess, notice }: LoginDialogProps) {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -59,6 +60,13 @@ export function LoginDialog({ open, onOpenChange, onSuccess }: LoginDialogProps)
             Authenticate to manage topics, revise notes, and reorder the queue.
           </DialogDescription>
         </DialogHeader>
+
+        {notice && (
+          <div className="p-3 text-xs text-amber-800 dark:text-amber-300 bg-amber-500/10 rounded-xl border border-amber-500/30 flex items-center gap-2">
+            <Lock className="w-4 h-4 shrink-0 text-amber-600 dark:text-amber-400" />
+            <span className="font-medium">{notice}</span>
+          </div>
+        )}
 
         <form onSubmit={handleSubmit} className="space-y-4 pt-2">
           {error && (

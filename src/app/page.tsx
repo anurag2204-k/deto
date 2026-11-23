@@ -66,6 +66,8 @@ import {
   ListTodo,
   Play,
   Sparkles,
+  BookMarked,
+  ExternalLink,
 } from 'lucide-react';
 
 function getLocalDateString(): string {
@@ -98,12 +100,22 @@ export default function DetoApp() {
 
   // Dialogs
   const [loginOpen, setLoginOpen] = useState(false);
+  const [loginNotice, setLoginNotice] = useState<string | null>(null);
+  const [pendingRedirect, setPendingRedirect] = useState<string | null>(null);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [aboutOpen, setAboutOpen] = useState(false);
   const [taskModalOpen, setTaskModalOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [selectedCalendarTaskId, setSelectedCalendarTaskId] = useState<string | null>(null);
   const [deleteTopicTarget, setDeleteTopicTarget] = useState<LightweightTopic | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  useEffect(() => {
+    if (toastMessage) {
+      const timer = setTimeout(() => setToastMessage(null), 3500);
+      return () => clearTimeout(timer);
+    }
+  }, [toastMessage]);
 
   useEffect(() => {
     setToday(getLocalDateString());
@@ -205,6 +217,17 @@ export default function DetoApp() {
       console.error('Logout failed', err);
     }
   };
+
+  const handleNotesLibraryClick = useCallback(() => {
+    if (isOwner) {
+      window.open('https://notesvercel-seven.vercel.app/', '_blank', 'noopener,noreferrer');
+    } else {
+      setPendingRedirect('https://notesvercel-seven.vercel.app/');
+      setLoginNotice('Please log in to access the Notes Library.');
+      setToastMessage('Please log in');
+      setLoginOpen(true);
+    }
+  }, [isOwner]);
 
   const handleConfirmDelete = async () => {
     if (!deleteTopicTarget) return;
@@ -542,6 +565,18 @@ export default function DetoApp() {
 
             <button
               type="button"
+              onClick={handleNotesLibraryClick}
+              className="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all text-slate-600 hover:text-slate-900 hover:bg-slate-100 dark:text-zinc-400 dark:hover:text-white dark:hover:bg-white/5 group"
+            >
+              <div className="flex items-center gap-3">
+                <BookMarked className="w-4 h-4 text-slate-400 dark:text-zinc-400 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors" />
+                <span>Notes Library</span>
+              </div>
+              <ExternalLink className="w-3.5 h-3.5 text-slate-400 dark:text-zinc-500 group-hover:text-slate-600 dark:group-hover:text-zinc-300 transition-colors" />
+            </button>
+
+            <button
+              type="button"
               onClick={() => setAboutOpen(true)}
               className="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 dark:text-zinc-400 dark:hover:text-white dark:hover:bg-white/5 transition-all"
             >
@@ -657,6 +692,7 @@ export default function DetoApp() {
                 dueTopicsCount={dueTopics.length}
                 pendingTasksCount={pendingTasksCount}
                 pendingTodosCount={pendingTodosCount}
+                onNotesLibraryClick={handleNotesLibraryClick}
               />
             </div>
           </div>
@@ -928,18 +964,39 @@ export default function DetoApp() {
       {/* Auth Modal */}
       <LoginDialog
         open={loginOpen}
-        onOpenChange={setLoginOpen}
+        notice={loginNotice}
+        onOpenChange={(open) => {
+          setLoginOpen(open);
+          if (!open) {
+            setPendingRedirect(null);
+            setLoginNotice(null);
+          }
+        }}
         onSuccess={() => {
           setIsOwner(true);
           fetchQueue();
           fetchTasks();
           fetchTodos();
           fetchActivity();
+          if (pendingRedirect) {
+            const redirectUrl = pendingRedirect;
+            setPendingRedirect(null);
+            setLoginNotice(null);
+            window.location.href = redirectUrl;
+          }
         }}
       />
 
       {/* About Modal */}
       <AboutDialog open={aboutOpen} onOpenChange={setAboutOpen} />
+
+      {/* Toast Notification */}
+      {toastMessage && (
+        <div className="fixed bottom-6 right-6 z-50 flex items-center gap-2.5 px-4 py-2.5 rounded-xl bg-slate-900 text-white dark:bg-zinc-800 dark:text-zinc-100 shadow-2xl border border-slate-700 dark:border-white/10 text-xs font-semibold animate-in fade-in slide-in-from-bottom-3 duration-200">
+          <AlertCircle className="w-4 h-4 text-amber-400 shrink-0" />
+          <span>{toastMessage}</span>
+        </div>
+      )}
     </div>
   );
 }

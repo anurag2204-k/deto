@@ -26,6 +26,8 @@ import {
   Sparkles,
   ListTodo,
   Play,
+  BookMarked,
+  ExternalLink,
 } from 'lucide-react';
 
 interface BurgerMenuProps {
@@ -39,6 +41,7 @@ interface BurgerMenuProps {
   dueTopicsCount: number;
   pendingTasksCount: number;
   pendingTodosCount?: number;
+  onNotesLibraryClick?: () => void;
 }
 
 export function BurgerMenu({
@@ -52,6 +55,7 @@ export function BurgerMenu({
   dueTopicsCount,
   pendingTasksCount,
   pendingTodosCount = 0,
+  onNotesLibraryClick,
 }: BurgerMenuProps) {
   const [open, setOpen] = useState(false);
   const router = useRouter();
@@ -296,6 +300,25 @@ export function BurgerMenu({
               <Badge variant="outline" className="text-[9px] py-0 px-1 text-indigo-600 dark:text-indigo-400 border-indigo-200 dark:border-indigo-500/30 font-medium">
                 AI
               </Badge>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setOpen(false);
+                if (onNotesLibraryClick) {
+                  onNotesLibraryClick();
+                } else if (isOwner) {
+                  window.open('https://notesvercel-seven.vercel.app/', '_blank', 'noopener,noreferrer');
+                }
+              }}
+              className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium transition-all text-slate-600 hover:text-slate-900 hover:bg-slate-100 dark:text-zinc-400 dark:hover:text-white dark:hover:bg-white/5 group"
+            >
+              <div className="flex items-center gap-2.5">
+                <BookMarked className="w-4 h-4 text-slate-400 dark:text-zinc-400 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors" />
+                <span>Notes Library</span>
+              </div>
+              <ExternalLink className="w-3.5 h-3.5 text-slate-400 dark:text-zinc-500 group-hover:text-slate-600 dark:group-hover:text-zinc-300 transition-colors" />
             </button>
 
             <button
