@@ -194,6 +194,29 @@ export function BurgerMenu({
             <button
               type="button"
               onClick={() => {
+                onSelectTab('todos');
+                setOpen(false);
+              }}
+              className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium transition-all ${
+                activeTab === 'todos'
+                  ? 'bg-indigo-50 border border-indigo-200 text-indigo-900 shadow-xs dark:bg-indigo-950/50 dark:border-indigo-500/30 dark:text-white'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100 dark:text-zinc-400 dark:hover:text-white dark:hover:bg-white/5'
+              }`}
+            >
+              <div className="flex items-center gap-2.5">
+                <ListTodo className={`w-4 h-4 ${activeTab === 'todos' ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-400 dark:text-zinc-400'}`} />
+                <span>To-Do Lists</span>
+              </div>
+              {pendingTodosCount > 0 && (
+                <Badge className="bg-indigo-600 text-white text-[10px] px-1.5 py-0">
+                  {pendingTodosCount}
+                </Badge>
+              )}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
                 onSelectTab('queue');
                 setOpen(false);
               }}
@@ -256,29 +279,6 @@ export function BurgerMenu({
               {pendingTasksCount > 0 && (
                 <Badge className="bg-emerald-500 text-white text-[10px] px-1.5 py-0">
                   {pendingTasksCount}
-                </Badge>
-              )}
-            </button>
-
-            <button
-              type="button"
-              onClick={() => {
-                onSelectTab('todos');
-                setOpen(false);
-              }}
-              className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium transition-all ${
-                activeTab === 'todos'
-                  ? 'bg-indigo-50 border border-indigo-200 text-indigo-900 shadow-xs dark:bg-indigo-950/50 dark:border-indigo-500/30 dark:text-white'
-                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100 dark:text-zinc-400 dark:hover:text-white dark:hover:bg-white/5'
-              }`}
-            >
-              <div className="flex items-center gap-2.5">
-                <ListTodo className={`w-4 h-4 ${activeTab === 'todos' ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-400 dark:text-zinc-400'}`} />
-                <span>To-Do Lists</span>
-              </div>
-              {pendingTodosCount > 0 && (
-                <Badge className="bg-indigo-600 text-white text-[10px] px-1.5 py-0">
-                  {pendingTodosCount}
                 </Badge>
               )}
             </button>

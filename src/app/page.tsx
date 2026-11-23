@@ -82,7 +82,7 @@ export default function DetoApp() {
   const router = useRouter();
   const [today, setToday] = useState('');
   const [isOwner, setIsOwner] = useState(false);
-  const [activeTab, setActiveTab] = useState<'queue' | 'due' | 'tasks' | 'todos'>('queue');
+  const [activeTab, setActiveTab] = useState<'queue' | 'due' | 'tasks' | 'todos'>('todos');
 
   // Topics & Tasks
   const [queueTopics, setQueueTopics] = useState<LightweightTopic[]>([]);
@@ -469,6 +469,26 @@ export default function DetoApp() {
           <nav className="space-y-1.5">
             <button
               type="button"
+              onClick={() => setActiveTab('todos')}
+              className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all ${
+                activeTab === 'todos'
+                  ? 'bg-indigo-50 border border-indigo-200 text-indigo-900 shadow-xs dark:bg-indigo-950/50 dark:border-indigo-500/30 dark:text-white dark:shadow-indigo-500/10'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100 dark:text-zinc-400 dark:hover:text-white dark:hover:bg-white/5'
+              }`}
+            >
+              <div className="flex items-center gap-3">
+                <ListTodo className={`w-4 h-4 ${activeTab === 'todos' ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-400 dark:text-zinc-400'}`} />
+                <span>To-Dos</span>
+              </div>
+              {pendingTodosCount > 0 && (
+                <Badge className="bg-indigo-600 text-white text-[11px] px-2 py-0 font-semibold shadow-xs">
+                  {pendingTodosCount}
+                </Badge>
+              )}
+            </button>
+
+            <button
+              type="button"
               onClick={() => setActiveTab('queue')}
               className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all ${
                 activeTab === 'queue'
@@ -523,26 +543,6 @@ export default function DetoApp() {
               {pendingTasksCount > 0 && (
                 <Badge className="bg-emerald-500 text-white text-[11px] px-2 py-0 font-semibold shadow-xs">
                   {pendingTasksCount}
-                </Badge>
-              )}
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setActiveTab('todos')}
-              className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all ${
-                activeTab === 'todos'
-                  ? 'bg-indigo-50 border border-indigo-200 text-indigo-900 shadow-xs dark:bg-indigo-950/50 dark:border-indigo-500/30 dark:text-white dark:shadow-indigo-500/10'
-                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100 dark:text-zinc-400 dark:hover:text-white dark:hover:bg-white/5'
-              }`}
-            >
-              <div className="flex items-center gap-3">
-                <ListTodo className={`w-4 h-4 ${activeTab === 'todos' ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-400 dark:text-zinc-400'}`} />
-                <span>To-Dos</span>
-              </div>
-              {pendingTodosCount > 0 && (
-                <Badge className="bg-indigo-600 text-white text-[11px] px-2 py-0 font-semibold shadow-xs">
-                  {pendingTodosCount}
                 </Badge>
               )}
             </button>
@@ -735,8 +735,29 @@ export default function DetoApp() {
             onOpenTopic={openTopicPage}
           />
 
-          {/* View Switcher Tabs (Queue | Due | Tasks & Habits) */}
+          {/* View Switcher Tabs (To-Dos | Queue | Due | Tasks & Habits) */}
           <div className="flex items-center gap-6 border-b border-slate-200 dark:border-white/10 pb-3">
+            <button
+              type="button"
+              onClick={() => setActiveTab('todos')}
+              className={`flex items-center gap-2 pb-2 text-sm font-medium transition-all relative ${
+                activeTab === 'todos'
+                  ? 'text-slate-900 dark:text-white font-semibold'
+                  : 'text-slate-500 hover:text-slate-800 dark:text-zinc-400 dark:hover:text-zinc-200'
+              }`}
+            >
+              <ListTodo className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+              <span>To-Dos</span>
+              {pendingTodosCount > 0 && (
+                <Badge className="bg-indigo-600 text-white text-[10px] px-1.5 py-0 ml-1">
+                  {pendingTodosCount}
+                </Badge>
+              )}
+              {activeTab === 'todos' && (
+                <div className="absolute -bottom-3 left-0 right-0 h-0.5 bg-indigo-600 dark:bg-indigo-500 shadow-[0_0_10px_#6366f1]" />
+              )}
+            </button>
+
             <button
               type="button"
               onClick={() => setActiveTab('queue')}
@@ -797,27 +818,6 @@ export default function DetoApp() {
               )}
               {activeTab === 'tasks' && (
                 <div className="absolute -bottom-3 left-0 right-0 h-0.5 bg-emerald-600 dark:bg-emerald-500 shadow-[0_0_10px_#10b981]" />
-              )}
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setActiveTab('todos')}
-              className={`flex items-center gap-2 pb-2 text-sm font-medium transition-all relative ${
-                activeTab === 'todos'
-                  ? 'text-slate-900 dark:text-white font-semibold'
-                  : 'text-slate-500 hover:text-slate-800 dark:text-zinc-400 dark:hover:text-zinc-200'
-              }`}
-            >
-              <ListTodo className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
-              <span>To-Dos</span>
-              {pendingTodosCount > 0 && (
-                <Badge className="bg-indigo-600 text-white text-[10px] px-1.5 py-0 ml-1">
-                  {pendingTodosCount}
-                </Badge>
-              )}
-              {activeTab === 'todos' && (
-                <div className="absolute -bottom-3 left-0 right-0 h-0.5 bg-indigo-600 dark:bg-indigo-500 shadow-[0_0_10px_#6366f1]" />
               )}
             </button>
           </div>
