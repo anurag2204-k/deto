@@ -68,6 +68,7 @@ import {
   Sparkles,
   BookMarked,
   ExternalLink,
+  Dumbbell,
 } from 'lucide-react';
 
 function getLocalDateString(): string {
@@ -545,6 +546,22 @@ export default function DetoApp() {
                   {pendingTasksCount}
                 </Badge>
               )}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => router.push('/gym')}
+              className="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all text-slate-600 hover:text-slate-900 hover:bg-slate-100 dark:text-zinc-400 dark:hover:text-white dark:hover:bg-white/5 group"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-5 h-5 rounded-lg bg-gradient-to-tr from-amber-500 to-indigo-600 flex items-center justify-center text-white shrink-0 shadow-xs shadow-amber-500/20 group-hover:scale-105 transition-transform">
+                  <Dumbbell className="w-2.5 h-2.5" />
+                </div>
+                <span>Gym (PPL)</span>
+              </div>
+              <Badge variant="outline" className="text-[10px] py-0 px-1.5 text-amber-600 dark:text-amber-400 border-amber-200 dark:border-amber-500/30 font-medium">
+                6-Day
+              </Badge>
             </button>
 
             <button

@@ -28,6 +28,7 @@ import {
   Play,
   BookMarked,
   ExternalLink,
+  Dumbbell,
 } from 'lucide-react';
 
 interface BurgerMenuProps {
@@ -281,6 +282,25 @@ export function BurgerMenu({
                   {pendingTasksCount}
                 </Badge>
               )}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setOpen(false);
+                router.push('/gym');
+              }}
+              className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium transition-all text-slate-600 hover:text-slate-900 hover:bg-slate-100 dark:text-zinc-400 dark:hover:text-white dark:hover:bg-white/5 group"
+            >
+              <div className="flex items-center gap-2.5">
+                <div className="w-4 h-4 rounded-md bg-gradient-to-tr from-amber-500 to-indigo-600 flex items-center justify-center text-white shrink-0 shadow-xs shadow-amber-500/20 group-hover:scale-105 transition-transform">
+                  <Dumbbell className="w-2 h-2 fill-current" />
+                </div>
+                <span>Gym (PPL)</span>
+              </div>
+              <Badge variant="outline" className="text-[9px] py-0 px-1 text-amber-600 dark:text-amber-400 border-amber-200 dark:border-amber-500/30 font-medium">
+                6-Day
+              </Badge>
             </button>
 
             <button

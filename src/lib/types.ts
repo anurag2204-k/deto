@@ -307,4 +307,51 @@ export function serializeTodoItem(doc: TodoItemDoc): TodoItem {
   };
 }
 
+export interface GymSet {
+  setNumber: number;
+  weight: number; // in kg
+  reps: number;
+  rpe?: number;
+  completed?: boolean;
+}
+
+export interface GymLogDoc {
+  _id: ObjectId;
+  exerciseId: string;
+  exerciseName: string;
+  dayKey: string;
+  date: string; // YYYY-MM-DD
+  slots: GymSet[];
+  notes?: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface GymLog {
+  _id: string;
+  exerciseId: string;
+  exerciseName: string;
+  dayKey: string;
+  date: string;
+  slots: GymSet[];
+  notes?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export function serializeGymLog(doc: GymLogDoc): GymLog {
+  return {
+    _id: doc._id.toString(),
+    exerciseId: doc.exerciseId,
+    exerciseName: doc.exerciseName,
+    dayKey: doc.dayKey,
+    date: doc.date,
+    slots: doc.slots || [],
+    notes: doc.notes,
+    createdAt: doc.createdAt instanceof Date ? doc.createdAt.toISOString() : String(doc.createdAt),
+    updatedAt: doc.updatedAt instanceof Date ? doc.updatedAt.toISOString() : String(doc.updatedAt),
+  };
+}
+
+
 

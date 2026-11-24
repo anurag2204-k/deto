@@ -1,4 +1,4 @@
-import { ActivityMap, LightweightTopic, RingFrequency, RingSettings, Topic, TopicFile, TopicQueueItem, Task, TodoFolder, TodoItem } from './types';
+import { ActivityMap, LightweightTopic, RingFrequency, RingSettings, Topic, TopicFile, TopicQueueItem, Task, TodoFolder, TodoItem, GymLog, GymSet } from './types';
 
 export class ApiError extends Error {
   status: number;
@@ -322,4 +322,54 @@ export async function deleteTodoItem(id: string): Promise<void> {
     method: 'DELETE',
   });
 }
+
+export async function getGymLogs(query?: {
+  exerciseId?: string;
+  dayKey?: string;
+  date?: string;
+}): Promise<GymLog[]> {
+  const params = new URLSearchParams();
+  if (query?.exerciseId) params.set('exerciseId', query.exerciseId);
+  if (query?.dayKey) params.set('dayKey', query.dayKey);
+  if (query?.date) params.set('date', query.date);
+  const qStr = params.toString();
+  return request<GymLog[]>(`/api/gym${qStr ? `?${qStr}` : ''}`);
+}
+
+export async function saveGymLog(data: {
+  exerciseId: string;
+  exerciseName: string;
+  dayKey: string;
+  date?: string;
+  slots: GymSet[];
+  notes?: string;
+}): Promise<GymLog> {
+  return request<GymLog>('/api/gym', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+}
+
+export async function updateGymLog(
+  id: string,
+  data: {
+    slots?: GymSet[];
+    notes?: string;
+    date?: string;
+  }
+): Promise<GymLog> {
+  return request<GymLog>(`/api/gym/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+}
+
+export async function deleteGymLog(id: string): Promise<{ success: boolean; deletedId: string }> {
+  return request<{ success: boolean; deletedId: string }>(`/api/gym/${id}`, {
+    method: 'DELETE',
+  });
+}
+
 
