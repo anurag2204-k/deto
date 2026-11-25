@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Task, LightweightTopic, RingColor, RingFrequency } from '@/lib/types';
 import { RING_COLORS } from '@/lib/logic';
-import { Check, Plus, Trash2, Link as LinkIcon, ListTodo, Loader2 } from 'lucide-react';
+import { Check, Plus, Trash2, Link as LinkIcon, ListTodo, Loader2, ChevronDown, ChevronUp } from 'lucide-react';
 
 interface TaskModalProps {
   open: boolean;
@@ -26,6 +26,18 @@ interface TaskModalProps {
   onCreateNewTopic?: () => void;
 }
 
+const FREQUENCY_OPTIONS = [
+  { id: '4x-week', label: '4 Days / Week', desc: 'At least 4 days (Gym)' },
+  { id: 'daily', label: 'Daily (7 Days)', desc: 'Every day' },
+  { id: '3x-week', label: '3 Days / Week', desc: 'Every 2 days' },
+  { id: '2x-week', label: '2 Days / Week', desc: 'Twice a week' },
+  { id: '1x-week', label: '1 Day / Week', desc: 'Once a week' },
+  { id: '5x-week', label: '5 Days / Week', desc: 'Weekdays' },
+  { id: '6x-week', label: '6 Days / Week', desc: 'High intensity' },
+  { id: '10x-month', label: '10 Days / Month', desc: 'Monthly baseline' },
+  { id: '15x-month', label: '15 Days / Month', desc: '15 days / month' },
+] as const;
+
 export function TaskModal({
   open,
   onOpenChange,
@@ -38,6 +50,7 @@ export function TaskModal({
   const [description, setDescription] = useState('');
   const [color, setColor] = useState<RingColor>('emerald');
   const [frequency, setFrequency] = useState<RingFrequency>('4x-week');
+  const [showScheduleSettings, setShowScheduleSettings] = useState(false);
   const [todos, setTodos] = useState<Array<{ id: string; text: string; done: boolean }>>([]);
   const [newTodoText, setNewTodoText] = useState('');
   const [linkedTopicIds, setLinkedTopicIds] = useState<string[]>([]);
@@ -45,6 +58,7 @@ export function TaskModal({
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    setShowScheduleSettings(false);
     if (task) {
       setTitle(task.title || '');
       setDescription(task.description || '');
@@ -123,6 +137,8 @@ export function TaskModal({
   };
 
   const selectedColorDef = RING_COLORS[color] || RING_COLORS.emerald;
+  const currentFreqItem = FREQUENCY_OPTIONS.find((f) => f.id === frequency);
+  const currentFreqLabel = currentFreqItem ? currentFreqItem.label : frequency;
 
   const undoneTodos = todos.filter((t) => !t.done);
   const doneTodos = todos.filter((t) => t.done);
@@ -148,7 +164,7 @@ export function TaskModal({
 
         {/* Scrollable Form Body */}
         <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0 overflow-hidden">
-          <div className="flex-1 overflow-y-auto px-5 py-4 sm:px-6 sm:py-5 space-y-5 min-w-0">
+          <div className="flex-1 overflow-y-auto px-5 py-4 sm:px-6 sm:py-5 space-y-4 min-w-0">
             {error && (
               <div className="p-3 text-xs text-red-600 dark:text-red-400 bg-red-500/10 border border-red-500/20 rounded-xl">
                 {error}
@@ -183,82 +199,114 @@ export function TaskModal({
               </div>
             </div>
 
-            {/* Color Selection */}
-            <div>
-              <label className="text-xs font-semibold text-slate-700 dark:text-zinc-300 block mb-1.5">
-                Theme Color &amp; Calendar Block Color
-              </label>
-              <div className="flex flex-wrap items-center gap-2">
-                {(Object.keys(RING_COLORS) as RingColor[]).map((cKey) => {
-                  const cDef = RING_COLORS[cKey];
-                  const isSel = color === cKey;
-                  return (
-                    <button
-                      key={cKey}
-                      type="button"
-                      onClick={() => setColor(cKey)}
-                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-medium transition-all ${
-                        isSel
-                          ? 'border-indigo-500 text-slate-900 dark:text-white ring-2 ring-indigo-500/30 scale-105 shadow-xs'
-                          : 'border-slate-200/80 dark:border-white/5 bg-slate-100/60 dark:bg-zinc-900/60 text-slate-600 dark:text-zinc-400 hover:border-slate-300 dark:hover:border-white/20 hover:text-slate-900 dark:hover:text-white'
-                      }`}
-                      style={isSel ? { backgroundColor: cDef.bgSubtle, borderColor: cDef.border } : {}}
-                    >
-                      <span
-                        className="w-3 h-3 rounded-full shrink-0"
-                        style={{ backgroundColor: cDef.hex }}
-                      />
-                      <span>{cDef.name.split(' ')[0]}</span>
-                      {isSel && <Check className="w-3 h-3 text-indigo-600 dark:text-white shrink-0" />}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
+            {/* Collapsible Cadence & Theme Color Settings */}
+            <div className="rounded-2xl border border-slate-200/80 dark:border-white/10 bg-slate-50/50 dark:bg-zinc-900/40 overflow-hidden transition-all">
+              <button
+                type="button"
+                onClick={() => setShowScheduleSettings((prev) => !prev)}
+                className="w-full flex items-center justify-between px-3.5 py-2.5 sm:px-4 sm:py-3 text-left hover:bg-slate-100/70 dark:hover:bg-zinc-800/40 transition-colors"
+              >
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <span
+                    className="w-3.5 h-3.5 rounded-full shrink-0 shadow-xs ring-2 ring-white dark:ring-zinc-900"
+                    style={{ backgroundColor: selectedColorDef.hex }}
+                  />
+                  <div className="flex items-center gap-2 flex-wrap min-w-0">
+                    <span className="text-xs font-semibold text-slate-800 dark:text-zinc-200">
+                      Cadence &amp; Color:
+                    </span>
+                    <span className="text-[11px] px-2 py-0.5 rounded-full bg-slate-200/80 dark:bg-zinc-800 text-slate-800 dark:text-zinc-200 font-medium">
+                      {currentFreqLabel}
+                    </span>
+                    <span className="text-[11px] text-slate-500 dark:text-zinc-400">
+                      • {selectedColorDef.name.split(' ')[0]}
+                    </span>
+                  </div>
+                </div>
 
-            {/* Target Frequency / Cadence */}
-            <div>
-              <label className="text-xs font-semibold text-slate-700 dark:text-zinc-300 block mb-1">
-                Target Frequency &amp; Schedule
-              </label>
-              <p className="text-[11px] text-slate-500 dark:text-zinc-400 mb-2">
-                When this target is met in a week, the <strong>entire week block lights up</strong> in your task&apos;s theme color!
-              </p>
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                {[
-                  { id: '4x-week', label: '4 Days / Week', desc: 'At least 4 days (Gym)' },
-                  { id: 'daily', label: 'Daily (7 Days)', desc: 'Every day' },
-                  { id: '3x-week', label: '3 Days / Week', desc: 'Every 2 days' },
-                  { id: '2x-week', label: '2 Days / Week', desc: 'Twice a week' },
-                  { id: '1x-week', label: '1 Day / Week', desc: 'Once a week' },
-                  { id: '5x-week', label: '5 Days / Week', desc: 'Weekdays' },
-                  { id: '6x-week', label: '6 Days / Week', desc: 'High intensity' },
-                  { id: '10x-month', label: '10 Days / Month', desc: 'Monthly baseline' },
-                  { id: '15x-month', label: '15 Days / Month', desc: '15 days / month' },
-                ].map((item) => (
-                  <button
-                    key={item.id}
-                    type="button"
-                    onClick={() => setFrequency(item.id as RingFrequency)}
-                    className={`p-2.5 rounded-xl border text-left transition-all ${
-                      frequency === item.id
-                        ? 'text-slate-900 dark:text-white shadow-xs ring-1 ring-indigo-500/30'
-                        : 'border-slate-200/80 dark:border-white/5 bg-slate-50 dark:bg-zinc-900/60 text-slate-600 dark:text-zinc-400 hover:border-slate-300 dark:hover:border-white/10 hover:text-slate-900 dark:hover:text-zinc-200'
-                    }`}
-                    style={
-                      frequency === item.id
-                        ? {
-                            backgroundColor: selectedColorDef.bgSubtle,
-                            borderColor: selectedColorDef.border,
+                <div className="flex items-center gap-1.5 shrink-0 ml-2">
+                  <span className="text-[11px] font-medium text-indigo-600 dark:text-indigo-400">
+                    {showScheduleSettings ? 'Hide' : 'Change'}
+                  </span>
+                  {showScheduleSettings ? (
+                    <ChevronUp className="w-4 h-4 text-slate-500 dark:text-zinc-400" />
+                  ) : (
+                    <ChevronDown className="w-4 h-4 text-slate-500 dark:text-zinc-400" />
+                  )}
+                </div>
+              </button>
+
+              {showScheduleSettings && (
+                <div className="px-3.5 pb-4 sm:px-4 sm:pb-4 pt-3 border-t border-slate-200/70 dark:border-white/5 space-y-4">
+                  {/* Color Selection */}
+                  <div>
+                    <label className="text-xs font-semibold text-slate-700 dark:text-zinc-300 block mb-1.5">
+                      Theme Color &amp; Calendar Block Color
+                    </label>
+                    <div className="flex flex-wrap items-center gap-2">
+                      {(Object.keys(RING_COLORS) as RingColor[]).map((cKey) => {
+                        const cDef = RING_COLORS[cKey];
+                        const isSel = color === cKey;
+                        return (
+                          <button
+                            key={cKey}
+                            type="button"
+                            onClick={() => setColor(cKey)}
+                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-medium transition-all ${
+                              isSel
+                                ? 'border-indigo-500 text-slate-900 dark:text-white ring-2 ring-indigo-500/30 scale-105 shadow-xs'
+                                : 'border-slate-200/80 dark:border-white/5 bg-slate-100/60 dark:bg-zinc-900/60 text-slate-600 dark:text-zinc-400 hover:border-slate-300 dark:hover:border-white/20 hover:text-slate-900 dark:hover:text-white'
+                            }`}
+                            style={isSel ? { backgroundColor: cDef.bgSubtle, borderColor: cDef.border } : {}}
+                          >
+                            <span
+                              className="w-3 h-3 rounded-full shrink-0"
+                              style={{ backgroundColor: cDef.hex }}
+                            />
+                            <span>{cDef.name.split(' ')[0]}</span>
+                            {isSel && <Check className="w-3 h-3 text-indigo-600 dark:text-white shrink-0" />}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Target Frequency / Cadence */}
+                  <div>
+                    <label className="text-xs font-semibold text-slate-700 dark:text-zinc-300 block mb-1">
+                      Target Frequency &amp; Schedule
+                    </label>
+                    <p className="text-[11px] text-slate-500 dark:text-zinc-400 mb-2">
+                      When this target is met in a week, the <strong>entire week block lights up</strong> in your task&apos;s theme color!
+                    </p>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                      {FREQUENCY_OPTIONS.map((item) => (
+                        <button
+                          key={item.id}
+                          type="button"
+                          onClick={() => setFrequency(item.id as RingFrequency)}
+                          className={`p-2.5 rounded-xl border text-left transition-all ${
+                            frequency === item.id
+                              ? 'text-slate-900 dark:text-white shadow-xs ring-1 ring-indigo-500/30'
+                              : 'border-slate-200/80 dark:border-white/5 bg-slate-50 dark:bg-zinc-900/60 text-slate-600 dark:text-zinc-400 hover:border-slate-300 dark:hover:border-white/10 hover:text-slate-900 dark:hover:text-zinc-200'
+                          }`}
+                          style={
+                            frequency === item.id
+                              ? {
+                                  backgroundColor: selectedColorDef.bgSubtle,
+                                  borderColor: selectedColorDef.border,
+                                }
+                              : {}
                           }
-                        : {}
-                    }
-                  >
-                    <p className="font-semibold text-xs text-slate-900 dark:text-white">{item.label}</p>
-                    <p className="text-[10px] text-slate-500 dark:text-zinc-400 mt-0.5 truncate">{item.desc}</p>
-                  </button>
-                ))}
-              </div>
+                        >
+                          <p className="font-semibold text-xs text-slate-900 dark:text-white">{item.label}</p>
+                          <p className="text-[10px] text-slate-500 dark:text-zinc-400 mt-0.5 truncate">{item.desc}</p>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* To-Do Checklist */}
