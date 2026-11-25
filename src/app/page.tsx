@@ -313,11 +313,29 @@ export default function DetoApp() {
   }, [today, fetchActivity]);
 
   const handleToggleTaskTodo = async (taskId: string, todoId: string, done: boolean) => {
+    // Optimistically update and reorder: undone items on top, done items at the bottom
+    setTasks((prev) =>
+      prev.map((t) => {
+        if (t._id !== taskId) return t;
+        const mapped = (t.todos || []).map((item) =>
+          item.id === todoId ? { ...item, done } : item
+        );
+        const undone = mapped.filter((item) => !item.done);
+        const completed = mapped.filter((item) => item.done);
+        return {
+          ...t,
+          todos: [...undone, ...completed],
+        };
+      })
+    );
+
     try {
       const updated = await toggleTaskTodo(taskId, todoId, done);
       setTasks((prev) => prev.map((t) => (t._id === updated._id ? updated : t)));
     } catch (err) {
       console.error('Failed to toggle todo', err);
+      // Revert from server on error
+      fetchTasks();
     }
   };
 

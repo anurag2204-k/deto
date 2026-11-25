@@ -18,6 +18,10 @@ import {
   Sparkles,
   ArrowUpRight,
   Loader2,
+  ChevronDown,
+  ChevronUp,
+  ChevronsUpDown,
+  ExternalLink,
 } from 'lucide-react';
 
 interface TaskListViewProps {
@@ -52,6 +56,21 @@ export function TaskListView({
   const [loggingId, setLoggingId] = useState<string | null>(null);
   const [inlineTodoText, setInlineTodoText] = useState<Record<string, string>>({});
   const [addingTodoId, setAddingTodoId] = useState<string | null>(null);
+  const [expandedTodoIds, setExpandedTodoIds] = useState<Record<string, boolean>>({});
+  const [expandedAllTasks, setExpandedAllTasks] = useState<Record<string, boolean>>({});
+  const [expandedListTasks, setExpandedListTasks] = useState<Record<string, boolean>>({});
+
+  const toggleTodoExpand = (todoId: string) => {
+    setExpandedTodoIds((prev) => ({ ...prev, [todoId]: !prev[todoId] }));
+  };
+
+  const toggleTaskExpandAll = (taskId: string) => {
+    setExpandedAllTasks((prev) => ({ ...prev, [taskId]: !prev[taskId] }));
+  };
+
+  const toggleListHeightExpand = (taskId: string) => {
+    setExpandedListTasks((prev) => ({ ...prev, [taskId]: !prev[taskId] }));
+  };
 
   const topicMap = new Map(topics.map((t) => [t._id, t]));
 
@@ -286,40 +305,220 @@ export function TaskListView({
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2 border-t border-slate-200/80 dark:border-white/5">
                   {/* To-Do Routine Checklist */}
                   <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-zinc-900/40 border border-slate-200/80 dark:border-white/5 space-y-2.5">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-semibold text-slate-800 dark:text-zinc-300 flex items-center gap-1.5">
-                        <ListTodo className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
-                        <span>Routine Checklist ({task.todos?.filter((t) => t.done).length || 0}/{task.todos?.length || 0})</span>
-                      </span>
-                    </div>
+                    {(() => {
+                      const undoneTodos = (task.todos || []).filter((t) => !t.done);
+                      const doneTodos = (task.todos || []).filter((t) => t.done);
+                      const isAllExpanded = Boolean(expandedAllTasks[task._id]);
+                      const isListExpanded = Boolean(expandedListTasks[task._id]);
 
-                    {(!task.todos || task.todos.length === 0) ? (
-                      <p className="text-[11px] text-slate-400 dark:text-zinc-500 italic py-1">
-                        No checklist items yet. Add routine steps below.
-                      </p>
-                    ) : (
-                      <div className="space-y-1.5 max-h-40 overflow-y-auto pr-1">
-                        {task.todos.map((item) => (
-                          <label
-                            key={item.id}
-                            className={`flex items-center gap-2 p-1.5 rounded-lg text-xs cursor-pointer select-none transition-colors ${
-                              item.done
-                                ? 'text-slate-400 dark:text-zinc-500 line-through bg-slate-100/50 dark:bg-white/[0.01]'
-                                : 'text-slate-700 dark:text-zinc-200 hover:bg-slate-100 dark:hover:bg-white/5'
-                            }`}
-                          >
-                            <input
-                              type="checkbox"
-                              checked={item.done}
-                              disabled={!isOwner}
-                              onChange={(e) => onToggleTodo(task._id, item.id, e.target.checked)}
-                              className="w-3.5 h-3.5 rounded bg-white dark:bg-zinc-900 border-slate-300 dark:border-white/20 text-indigo-600 dark:text-indigo-500 focus:ring-0 cursor-pointer"
-                            />
-                            <span className="truncate flex-1">{item.text}</span>
-                          </label>
-                        ))}
-                      </div>
-                    )}
+                      return (
+                        <>
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs font-semibold text-slate-800 dark:text-zinc-300 flex items-center gap-1.5">
+                              <ListTodo className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
+                              <span>Routine Checklist ({doneTodos.length}/{task.todos?.length || 0})</span>
+                            </span>
+
+                            <div className="flex items-center gap-1">
+                              {task.todos && task.todos.length > 0 && (
+                                <>
+                                  <button
+                                    type="button"
+                                    onClick={() => toggleTaskExpandAll(task._id)}
+                                    className={`p-1 rounded-lg text-xs flex items-center gap-1 transition-colors ${
+                                      isAllExpanded
+                                        ? 'text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/40 font-medium'
+                                        : 'text-slate-400 dark:text-zinc-500 hover:text-slate-700 dark:hover:text-zinc-300 hover:bg-slate-100 dark:hover:bg-white/5'
+                                    }`}
+                                    title={isAllExpanded ? "Collapse full text lines" : "Expand full text lines"}
+                                  >
+                                    <ChevronsUpDown className="w-3.5 h-3.5" />
+                                    <span className="text-[10px] hidden sm:inline">
+                                      {isAllExpanded ? 'Collapse' : 'Expand Text'}
+                                    </span>
+                                  </button>
+
+                                  {task.todos.length > 4 && (
+                                    <button
+                                      type="button"
+                                      onClick={() => toggleListHeightExpand(task._id)}
+                                      className="p-1 rounded-lg text-slate-400 dark:text-zinc-500 hover:text-slate-700 dark:hover:text-zinc-300 hover:bg-slate-100 dark:hover:bg-white/5 text-[10px] flex items-center gap-0.5"
+                                      title={isListExpanded ? "Fit checklist height" : "Expand checklist view"}
+                                    >
+                                      <span>{isListExpanded ? 'Show Less' : 'Show All'}</span>
+                                      {isListExpanded ? (
+                                        <ChevronUp className="w-3 h-3" />
+                                      ) : (
+                                        <ChevronDown className="w-3 h-3" />
+                                      )}
+                                    </button>
+                                  )}
+                                </>
+                              )}
+                            </div>
+                          </div>
+
+                          {(!task.todos || task.todos.length === 0) ? (
+                            <p className="text-[11px] text-slate-400 dark:text-zinc-500 italic py-1">
+                              No checklist items yet. Add routine steps below.
+                            </p>
+                          ) : (
+                            <div className={`space-y-1.5 ${isListExpanded ? 'max-h-none' : 'max-h-48'} overflow-y-auto pr-1 transition-all`}>
+                              {/* Pending / Undone Items (Brought Up the List) */}
+                              {undoneTodos.map((item) => {
+                                const isExpanded = isAllExpanded || Boolean(expandedTodoIds[item.id]);
+                                const isUrl = /^https?:\/\//i.test(item.text.trim());
+                                const isLong = item.text.length > 45;
+
+                                return (
+                                  <div
+                                    key={item.id}
+                                    className="group flex items-start gap-2 p-1.5 rounded-lg text-xs transition-colors hover:bg-slate-100 dark:hover:bg-white/5 select-none text-slate-700 dark:text-zinc-200"
+                                  >
+                                    <input
+                                      type="checkbox"
+                                      checked={item.done}
+                                      disabled={!isOwner}
+                                      onChange={(e) => onToggleTodo(task._id, item.id, e.target.checked)}
+                                      className="w-3.5 h-3.5 rounded bg-white dark:bg-zinc-900 border-slate-300 dark:border-white/20 text-indigo-600 dark:text-indigo-500 focus:ring-0 cursor-pointer mt-0.5 shrink-0"
+                                    />
+
+                                    <div
+                                      className="flex-1 min-w-0 cursor-pointer"
+                                      onClick={() => {
+                                        if (isLong) toggleTodoExpand(item.id);
+                                      }}
+                                      title={item.text}
+                                    >
+                                      <span
+                                        className={`block ${
+                                          isExpanded
+                                            ? 'whitespace-pre-wrap break-words leading-relaxed select-text'
+                                            : 'truncate'
+                                        }`}
+                                      >
+                                        {item.text}
+                                      </span>
+                                    </div>
+
+                                    <div className="flex items-center gap-1 shrink-0">
+                                      {isUrl && (
+                                        <a
+                                          href={item.text.trim()}
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                          onClick={(e) => e.stopPropagation()}
+                                          className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 p-0.5"
+                                          title="Open link"
+                                        >
+                                          <ExternalLink className="w-3 h-3" />
+                                        </a>
+                                      )}
+                                      {isLong && !isAllExpanded && (
+                                        <button
+                                          type="button"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            toggleTodoExpand(item.id);
+                                          }}
+                                          className="text-slate-400 hover:text-slate-700 dark:text-zinc-500 dark:hover:text-zinc-300 p-0.5 opacity-70 group-hover:opacity-100 transition-opacity"
+                                          title={isExpanded ? 'Collapse' : 'Expand full line'}
+                                        >
+                                          {isExpanded ? (
+                                            <ChevronUp className="w-3 h-3" />
+                                          ) : (
+                                            <ChevronDown className="w-3 h-3" />
+                                          )}
+                                        </button>
+                                      )}
+                                    </div>
+                                  </div>
+                                );
+                              })}
+
+                              {/* Divider between undone and done if both exist */}
+                              {doneTodos.length > 0 && undoneTodos.length > 0 && (
+                                <div className="pt-2 pb-1 border-t border-slate-200/80 dark:border-white/5 flex items-center justify-between text-[10px] font-semibold text-slate-400 dark:text-zinc-500 uppercase tracking-wider">
+                                  <span>Completed ({doneTodos.length})</span>
+                                </div>
+                              )}
+
+                              {/* Completed / Done Items (Put Down on the List) */}
+                              {doneTodos.map((item) => {
+                                const isExpanded = isAllExpanded || Boolean(expandedTodoIds[item.id]);
+                                const isUrl = /^https?:\/\//i.test(item.text.trim());
+                                const isLong = item.text.length > 45;
+
+                                return (
+                                  <div
+                                    key={item.id}
+                                    className="group flex items-start gap-2 p-1.5 rounded-lg text-xs transition-colors bg-slate-100/50 dark:bg-white/[0.01] text-slate-400 dark:text-zinc-500 select-none"
+                                  >
+                                    <input
+                                      type="checkbox"
+                                      checked={item.done}
+                                      disabled={!isOwner}
+                                      onChange={(e) => onToggleTodo(task._id, item.id, e.target.checked)}
+                                      className="w-3.5 h-3.5 rounded bg-white dark:bg-zinc-900 border-slate-300 dark:border-white/20 text-indigo-600 dark:text-indigo-500 focus:ring-0 cursor-pointer mt-0.5 shrink-0 opacity-70"
+                                    />
+
+                                    <div
+                                      className="flex-1 min-w-0 cursor-pointer line-through"
+                                      onClick={() => {
+                                        if (isLong) toggleTodoExpand(item.id);
+                                      }}
+                                      title={item.text}
+                                    >
+                                      <span
+                                        className={`block ${
+                                          isExpanded
+                                            ? 'whitespace-pre-wrap break-words leading-relaxed select-text'
+                                            : 'truncate'
+                                        }`}
+                                      >
+                                        {item.text}
+                                      </span>
+                                    </div>
+
+                                    <div className="flex items-center gap-1 shrink-0">
+                                      {isUrl && (
+                                        <a
+                                          href={item.text.trim()}
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                          onClick={(e) => e.stopPropagation()}
+                                          className="text-slate-400 hover:text-slate-600 dark:text-zinc-500 dark:hover:text-zinc-300 p-0.5"
+                                          title="Open link"
+                                        >
+                                          <ExternalLink className="w-3 h-3" />
+                                        </a>
+                                      )}
+                                      {isLong && !isAllExpanded && (
+                                        <button
+                                          type="button"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            toggleTodoExpand(item.id);
+                                          }}
+                                          className="text-slate-400 hover:text-slate-700 dark:text-zinc-500 dark:hover:text-zinc-300 p-0.5 opacity-70 group-hover:opacity-100"
+                                          title={isExpanded ? 'Collapse' : 'Expand full line'}
+                                        >
+                                          {isExpanded ? (
+                                            <ChevronUp className="w-3 h-3" />
+                                          ) : (
+                                            <ChevronDown className="w-3 h-3" />
+                                          )}
+                                        </button>
+                                      )}
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </>
+                      );
+                    })()}
 
                     {isOwner && (
                       <div className="flex items-center gap-1.5 pt-1">

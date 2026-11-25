@@ -59,17 +59,23 @@ export async function POST(
         }
         return item;
       });
+
+      // Put undone items first, and completed items down at the bottom
+      const undone = updatedTodos.filter((item) => !item.done);
+      const completed = updatedTodos.filter((item) => item.done);
+      updatedTodos = [...undone, ...completed];
     }
     // Case 3: add new todo
     else if (typeof body.addText === 'string' && body.addText.trim()) {
-      updatedTodos = [
-        ...updatedTodos,
-        {
-          id: `todo-${Date.now()}`,
-          text: body.addText.trim(),
-          done: false,
-        },
-      ];
+      const newTodo: TaskTodoItem = {
+        id: `todo-${Date.now()}`,
+        text: body.addText.trim(),
+        done: false,
+      };
+      // Add new undone item to the end of undone items (before completed items)
+      const undone = updatedTodos.filter((item) => !item.done);
+      const completed = updatedTodos.filter((item) => item.done);
+      updatedTodos = [...undone, newTodo, ...completed];
     }
 
     await tasksCollection.updateOne(
